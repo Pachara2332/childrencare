@@ -1,0 +1,202 @@
+// prisma/schema.prisma
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ─── ปีการศึกษา ───────────────────────────────────────────────────────────────
+model AcademicYear {
+    id        Int      @id @default(autoincrement())
+    year      String   @unique // "2567", "2568"
+    name      String // "ปีการศึกษา 2567"
+    startDate DateTime
+    endDate   DateTime
+    isActive  Boolean  @default(false)
+    createdAt DateTime @default(now())
+
+    enrollments   ChildEnrollment[]
+    activities    DailyActivity[]
+    announcements Announcement[]
+    payments      Payment[]
+    classLevels   ClassLevel[]
+}
+
+// ─── ระดับชั้น (เตรียมอนุบาล / อนุบาล 1 / อนุบาล 2 ...) ─────────────────────
+model ClassLevel {
+    id             Int    @id @default(autoincrement())
+    academicYearId Int
+    code           String // "KG0" | "KG1" | "KG2" | "KG3"
+    name           String // "เตรียมอนุบาล" | "อนุบาล 1" ...
+    minAgeMonths   Int // อายุขั้นต่ำ (เดือน)  KG0=24, KG1=36
+    maxAgeMonths   Int // อายุสูงสุด (เดือน)   KG0=35, KG1=47
+    color          String @default("#52B788") // สีประจำชั้น
+    order          Int    @default(0) // ลำดับแสดงผล
+
+    academicYear AcademicYear      @relation(fields: [academicYearId], references: [id])
+    enrollments  ChildEnrollment[]
+
+    @@unique([academicYearId, code])
+}
+
+// ─── เด็ก ─────────────────────────────────────────────────────────────────────
+model Child {
+    id          Int      @id @default(autoincrement())
+    code        String   @unique // "KD001"
+    firstName   String
+    lastName    String
+    nickname    String
+    gender      String // "male" | "female"
+    dateOfBirth DateTime
+    bloodType   String?
+    disease     String?
+    allergy     String?
+
+    parentName     String
+    parentPhone    String
+    parentPhone2   String?
+    parentRelation String // "father"|"mother"|"guardian"
+    address        String?
+
+    qrToken   String   @unique @default(cuid())
+    photoUrl  String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    enrollments  ChildEnrollment[]
+    checkIns     CheckIn[]
+    developments Development[]
+    activities   DailyActivity[]
+    payments     Payment[]
+}
+
+// ─── การลงทะเบียนเด็กในแต่ละปี + ระดับชั้น ────────────────────────────────────
+model ChildEnrollment {
+    id             Int      @id @default(autoincrement())
+    childId        Int
+    academicYearId Int
+    levelId        Int // ← ระดับชั้น
+    enrolledAt     DateTime @default(now())
+    status         String   @default("active") // "active"|"leave"|"graduated"
+    note           String?
+
+    child        Child        @relation(fields: [childId], references: [id])
+    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+    level        ClassLevel   @relation(fields: [levelId], references: [id])
+
+    @@unique([childId, academicYearId])
+}
+
+// ─── เช็กชื่อ ─────────────────────────────────────────────────────────────────
+model CheckIn {
+    id         Int       @id @default(autoincrement())
+    childId    Int
+    date       DateTime  @db.Date
+    checkInAt  DateTime?
+    checkOutAt DateTime?
+    note       String?
+    method     String    @default("manual") // "qr"|"manual"
+    createdAt  DateTime  @default(now())
+
+    child Child @relation(fields: [childId], references: [id])
+
+    @@unique([childId, date])
+}
+
+// ─── พัฒนาการ ─────────────────────────────────────────────────────────────────
+model Development {
+    id         Int      @id @default(autoincrement())
+    childId    Int
+    recordedAt DateTime @default(now())
+    weight     Float?
+    height     Float?
+
+    scoreLanguage  Int?
+    scorePhysical  Int?
+    scoreIntellect Int?
+    scoreEmotional Int?
+    scoreSocial    Int?
+
+    note       String?
+    recordedBy String  @default("teacher")
+
+    child Child @relation(fields: [childId], references: [id])
+}
+
+// ─── กิจกรรมประจำวัน ──────────────────────────────────────────────────────────
+model DailyActivity {
+    id             Int      @id @default(autoincrement())
+    childId        Int
+    academicYearId Int
+    date           DateTime @db.Date
+
+    meals          String?
+    mealsNote      String?
+    sleepMinutes   Int?
+    sleepNote      String?
+    activities     String[]
+    activitiesNote String?
+    mood           String?
+    teacherNote    String?
+    photoUrls      String[] @default([])
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    child        Child        @relation(fields: [childId], references: [id])
+    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+    @@unique([childId, date])
+}
+
+// ─── ประกาศ ───────────────────────────────────────────────────────────────────
+model Announcement {
+    id             Int       @id @default(autoincrement())
+    academicYearId Int
+    title          String
+    content        String
+    type           String    @default("general")
+    isUrgent       Boolean   @default(false)
+    publishedAt    DateTime  @default(now())
+    expiresAt      DateTime?
+    createdAt      DateTime  @default(now())
+
+    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+}
+
+// ─── ค่าใช้จ่าย ───────────────────────────────────────────────────────────────
+model Payment {
+    id             Int @id @default(autoincrement())
+    childId        Int
+    academicYearId Int
+    month          Int
+    year           Int
+
+    tuitionFee   Float   @default(0)
+    foodFee      Float   @default(0)
+    otherFee     Float   @default(0)
+    otherFeeNote String?
+
+    status     String    @default("pending")
+    paidAt     DateTime?
+    paidMethod String?
+    receiptNo  String?
+    note       String?
+    dueDate    DateTime
+    createdAt  DateTime  @default(now())
+
+    child        Child        @relation(fields: [childId], references: [id])
+    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+    @@unique([childId, academicYearId, month, year])
+}
+
+// ─── Config ─────────────────s──────────────────────────────────────────────────
+model AppConfig {
+    id    Int    @id @default(autoincrement())
+    key   String @unique
+    value Json
+}

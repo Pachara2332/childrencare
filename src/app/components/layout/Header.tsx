@@ -3,6 +3,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useChildcareStore } from '@/store/useStore'
 
 const pageTitles: Record<string, { title: string; subtitle: string; accent: string }> = {
     '/dashboard': { title: 'ภาพรวม', subtitle: 'สรุปสถานะศูนย์ประจำวัน', accent: 'var(--leaf)' },
@@ -19,7 +20,9 @@ const pageTitles: Record<string, { title: string; subtitle: string; accent: stri
 export default function Header() {
     const pathname = usePathname()
     const [now, setNow] = useState(new Date())
-    const [presentCount, setPresentCount] = useState<number | null>(null)
+    
+    // Zustand Store
+    const { presentCount, fetchPresentCount } = useChildcareStore()
 
     // Match page title
     const pageKey = Object.keys(pageTitles).find(k => pathname.startsWith(k)) ?? '/dashboard'
@@ -33,11 +36,8 @@ export default function Header() {
 
     // Fetch today's present count
     useEffect(() => {
-        fetch('/api/checkin/today-count')
-            .then(r => r.json())
-            .then(d => setPresentCount(d.count))
-            .catch(() => { })
-    }, [pathname])
+        fetchPresentCount()
+    }, [pathname, fetchPresentCount])
 
     const dateStr = now.toLocaleDateString('th-TH', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',

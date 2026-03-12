@@ -2,6 +2,7 @@
 import { requireAuth } from '@/lib/auth'
 import Sidebar from '@/app/components/layout/Sidebar'
 import Header from '@/app/components/layout/Header'
+import StoreInitializer from '@/app/components/providers/StoreInitializer'
 
 export default async function DashboardLayout({
     children,
@@ -12,6 +13,7 @@ export default async function DashboardLayout({
 
     return (
         <div className="flex h-screen overflow-hidden" style={{ background: 'var(--cream)' }}>
+            <StoreInitializer />
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                 <Header />

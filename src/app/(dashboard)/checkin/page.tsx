@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import QRCode from 'qrcode'
 import { StatsSkeleton, TableSkeleton, ChildListSkeleton } from '@/app/components/ui/Skeleton'
+import { useChildcareStore } from '@/store/useStore'
 
 interface Child {
     id: number
@@ -65,6 +66,9 @@ export default function CheckInPage() {
         new Date().toISOString().split('T')[0]
     )
 
+    // Zustand
+    const { activeYear, fetchPresentCount } = useChildcareStore()
+
     const showToast = (msg: string, ok: boolean) => {
         setToast({ msg, ok })
         setTimeout(() => setToast(null), 3000)
@@ -86,10 +90,6 @@ export default function CheckInPage() {
     // Fetch enrollments to know each child's level
     const fetchEnrollments = useCallback(async () => {
         try {
-            // Get active year first
-            const yearsRes = await fetch('/api/academic-years')
-            const years = await yearsRes.json()
-            const activeYear = years.find((y: { isActive: boolean; id: number }) => y.isActive)
             if (!activeYear) return
 
             const res = await fetch(`/api/enrollments?yearId=${activeYear.id}`)
@@ -107,7 +107,7 @@ export default function CheckInPage() {
             }
             setLevels(uniqueLevels)
         } catch { /* ignore */ }
-    }, [])
+    }, [activeYear])
 
     // Generate QR code for today's check-in URL
     const generateQR = useCallback(async () => {
@@ -134,6 +134,7 @@ export default function CheckInPage() {
         if (res.ok) {
             showToast(`✅ บันทึก${type === 'in' ? 'เข้า' : 'ออก'}เรียบร้อย`, true)
             fetchRecords()
+            fetchPresentCount() // Sync header
         } else {
             showToast(`⚠️ ${data.message}`, false)
         }

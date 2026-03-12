@@ -1,21 +1,21 @@
-// app/api/academic-years/[id]/levels/[levelId]/route.ts
+// app/api/academic-years/[id]/levels/[levelsId]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; levelId: string }> }
+  { params }: { params: Promise<{ id: string; levelsId: string }> }
 ) {
   const session = await getSession()
   if (!session.isAuthenticated)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { levelId } = await params
+  const { levelsId } = await params
   const body = await req.json()
 
   const level = await prisma.classLevel.update({
-    where: { id: Number(levelId) },
+    where: { id: Number(levelsId) },
     data: {
       name:         body.name,
       minAgeMonths: body.minAgeMonths !== undefined ? Number(body.minAgeMonths) : undefined,
@@ -30,17 +30,17 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string; levelId: string }> }
+  { params }: { params: Promise<{ id: string; levelsId: string }> }
 ) {
   const session = await getSession()
   if (!session.isAuthenticated)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { levelId } = await params
+  const { levelsId } = await params
 
   // ตรวจสอบว่ามีเด็กในชั้นนี้ไหม
   const count = await prisma.childEnrollment.count({
-    where: { levelId: Number(levelId) },
+    where: { levelId: Number(levelsId) },
   })
 
   if (count > 0) {
@@ -50,6 +50,6 @@ export async function DELETE(
     )
   }
 
-  await prisma.classLevel.delete({ where: { id: Number(levelId) } })
+  await prisma.classLevel.delete({ where: { id: Number(levelsId) } })
   return NextResponse.json({ success: true })
 }

@@ -14,7 +14,7 @@ async function getDashboardData() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const [totalChildren, presentToday, announcements, recentActivities, pendingPayments] =
+    const [totalChildren, presentToday, announcements, recentActivities, totalSavings] =
         await Promise.all([
             prisma.childEnrollment.count({
                 where: { academicYearId: activeYear.id, status: 'active' },
@@ -39,14 +39,12 @@ async function getDashboardData() {
                 include: { child: true },
                 take: 5,
             }),
-            prisma.payment.count({
-                where: {
-                    academicYearId: activeYear.id,
-                    status: { in: ['pending', 'overdue'] },
-                },
+            prisma.saving.aggregate({
+                where: { academicYearId: activeYear.id },
+                _sum: { amount: true },
             }),
         ])
-
+    const savingsTotal = totalSavings._sum.amount ?? 0
     const children = await prisma.child.findMany({
         where: {
             enrollments: {
@@ -67,7 +65,7 @@ async function getDashboardData() {
         include: { child: true },
         orderBy: { checkInAt: 'desc' },
     })
-    
+
     const checkInsToday = checkInsTodayArray.slice(0, 8)
 
     return {
@@ -77,7 +75,7 @@ async function getDashboardData() {
         absentToday: totalChildren - presentToday,
         announcements,
         recentActivities,
-        pendingPayments,
+        totalSavings: savingsTotal,
         checkInsToday,
         allChildren: children,
         allCheckInsToday: checkInsTodayArray,
@@ -134,7 +132,7 @@ export default async function DashboardPage() {
                         <DashboardBadge />
                         {[
                             { label: 'ขาดเรียน', value: data.absentToday, color: 'oklch(0.8 0.1 25)' },
-                            { label: 'ค้างจ่าย', value: data.pendingPayments, color: 'oklch(0.8 0.1 70)' },
+                            { label: 'เงินออมรวม', value: `฿${data.totalSavings.toLocaleString('th-TH')}`, color: 'oklch(0.8 0.1 70)' },
                         ].map(s => (
                             <div key={s.label} className="text-right">
                                 <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>

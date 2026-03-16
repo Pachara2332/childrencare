@@ -62,12 +62,14 @@ function calcAge(dob: string) {
 
 function getLevelColor(color: string) {
     const map: Record<string, { bg: string; text: string }> = {
-        '#F4A261': { bg: '#FFF3E8', text: '#7D4E00' },
-        '#52B788': { bg: '#E8F5EE', text: '#1B4332' },
-        '#457B9D': { bg: '#E3EEF5', text: '#1D3557' },
-        '#E76F51': { bg: '#FFF0ED', text: '#7D2A1A' },
+        '#F4A261': { bg: 'oklch(0.95 0.04 70)', text: 'oklch(0.40 0.08 70)' },
+        '#52B788': { bg: 'oklch(0.95 0.04 160)', text: 'oklch(0.32 0.07 160)' },
+        '#457B9D': { bg: 'oklch(0.94 0.03 240)', text: 'oklch(0.35 0.07 240)' },
+        '#E76F51': { bg: 'oklch(0.95 0.04 25)', text: 'oklch(0.38 0.10 25)' },
+        '#E9C46A': { bg: 'oklch(0.96 0.04 90)', text: 'oklch(0.42 0.08 90)' },
+        '#9B72CF': { bg: 'oklch(0.95 0.04 300)', text: 'oklch(0.38 0.10 300)' },
     }
-    return map[color] ?? { bg: '#F0EDEA', text: '#4A5568' }
+    return map[color] ?? { bg: 'var(--cream)', text: 'var(--muted)' }
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -127,8 +129,7 @@ export default function ChildrenPage() {
                     <select
                         value={selectedYearId ?? ''}
                         onChange={e => { setSelectedYearId(Number(e.target.value)); setSelectedLevelId('all') }}
-                        className="text-sm rounded-xl px-3 py-2 outline-none font-semibold"
-                        style={{ border: '1px solid var(--warm)', background: 'white', color: 'var(--text)' }}
+                        className="text-sm rounded-xl px-3 py-2 font-semibold input-field"
                     >
                         {years.map(y => (
                             <option key={y.id} value={y.id}>
@@ -143,17 +144,18 @@ export default function ChildrenPage() {
                         <button
                             key={t}
                             onClick={() => setMainTab(t)}
-                            className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{
                                 background: mainTab === t ? 'var(--leaf)' : 'white',
                                 color: mainTab === t ? 'white' : 'var(--muted)',
                                 border: `1px solid ${mainTab === t ? 'var(--leaf)' : 'var(--warm)'}`,
+                                transition: 'all 0.15s var(--ease-out-quart)',
                             }}
                         >
-                            {t === 'roster' ? '📋 ทะเบียนนักเรียน'
-                                : t === 'add' ? '➕ เพิ่มเด็ก'
-                                    : t === 'import' ? '📥 นำเข้า JSON'
-                                        : '🏫 จัดการระดับชั้น'}
+                            {t === 'roster' ? 'ทะเบียนนักเรียน'
+                                : t === 'add' ? 'เพิ่มเด็ก'
+                                    : t === 'import' ? 'นำเข้า JSON'
+                                        : 'จัดการระดับชั้น'}
                         </button>
                     ))}
                 </div>
@@ -236,13 +238,12 @@ export default function ChildrenPage() {
 
                     {/* Search */}
                     <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base">🔍</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--muted)' }}>🔍</span>
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="ค้นหาชื่อ ชื่อเล่น หรือรหัส..."
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none"
-                            style={{ border: '1px solid var(--warm)', background: 'white', color: 'var(--text)' }}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm input-field"
                         />
                     </div>
 
@@ -354,24 +355,16 @@ function ChildGrid({
                 return (
                     <div
                         key={e.id}
-                        className="rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5"
-                        style={{
-                            background: 'white',
-                            border: '1px solid var(--warm)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        }}
+                        className="card card-interactive rounded-2xl overflow-hidden"
                     >
-                        {/* Level stripe */}
-                        <div className="h-1.5" style={{ background: e.level.color }} />
-
                         <div className="p-4">
                             {/* Avatar + name */}
                             <div className="flex items-center gap-3 mb-3">
                                 <div
-                                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black shrink-0"
+                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-lg font-bold shrink-0"
                                     style={{
-                                        background: e.child.gender === 'male' ? '#DBE9F4' : '#FDE8F0',
-                                        color: e.child.gender === 'male' ? 'var(--sky)' : '#C2185B',
+                                        background: e.child.gender === 'male' ? 'oklch(0.90 0.04 240)' : 'oklch(0.92 0.04 350)',
+                                        color: e.child.gender === 'male' ? 'var(--sky)' : 'oklch(0.50 0.12 350)',
                                     }}
                                 >
                                     {e.child.nickname.slice(0, 1)}

@@ -59,6 +59,7 @@ model Child {
     parentPhone    String
     parentPhone2   String?
     parentRelation String // "father"|"mother"|"guardian"
+    guardianPhone  String? // used to group siblings — same phone = same family
     address        String?
 
     qrToken   String   @unique @default(cuid())
@@ -99,6 +100,10 @@ model CheckIn {
     checkOutAt DateTime?
     note       String?
     method     String    @default("manual") // "qr"|"manual"
+    pickupName     String?  // ชื่อผู้มารับ
+    pickupRelation String?  // ความสัมพันธ์: แม่/พ่อ/ปู่/ย่า/ตา/ยาย/พี่เลี้ยง/อื่นๆ
+    isAbsent   Boolean   @default(false)
+    absenceReason String? // ลาป่วย/ลากิจ/เหตุผลอื่นๆ
     createdAt  DateTime  @default(now())
 
     child Child @relation(fields: [childId], references: [id])

@@ -24,7 +24,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   // Allow both authenticated (teacher manual) and unauthenticated (parent QR)
-  const { childId, type, date: dateStr, method = 'manual', note } = await req.json()
+  const {
+    childId,
+    type, // 'in' | 'out' | 'absent'
+    date: dateStr,
+    method = 'manual',
+    note,
+    pickupName,
+    pickupRelation,
+  } = await req.json()
 
   if (!childId || !type) {
     return NextResponse.json({ message: 'ข้อมูลไม่ครบ' }, { status: 400 })
@@ -40,9 +48,31 @@ export async function POST(req: NextRequest) {
       where: { childId_date: { childId: Number(childId), date } },
     })
 
+    if (type === 'absent') {
+      if (existing?.checkInAt) {
+        return NextResponse.json({ message: 'เด็กเช็กชื่อเข้าแล้ว ไม่สามารถแจ้งลาได้' }, { status: 400 })
+      }
+      const record = await prisma.checkIn.upsert({
+        where: { childId_date: { childId: Number(childId), date } },
+        update: { isAbsent: true, absenceReason: note },
+        create: { childId: Number(childId), date, isAbsent: true, absenceReason: note, method },
+        include: { child: true },
+      })
+      return NextResponse.json(record)
+    }
+
     if (type === 'in') {
       if (existing?.checkInAt) {
         return NextResponse.json({ message: 'เช็กชื่อเข้าแล้ว' }, { status: 400 })
+      }
+      if (existing?.isAbsent) {
+        // If marked absent but now checking in, we override the absence
+        const record = await prisma.checkIn.update({
+          where: { childId_date: { childId: Number(childId), date } },
+          data: { checkInAt: now, isAbsent: false, absenceReason: null, method, note },
+          include: { child: true },
+        })
+        return NextResponse.json(record)
       }
       const record = await prisma.checkIn.upsert({
         where: { childId_date: { childId: Number(childId), date } },
@@ -60,7 +90,12 @@ export async function POST(req: NextRequest) {
       }
       const record = await prisma.checkIn.update({
         where: { childId_date: { childId: Number(childId), date } },
-        data: { checkOutAt: now, note },
+        data: {
+          checkOutAt: now,
+          note,
+          ...(pickupName ? { pickupName } : {}),
+          ...(pickupRelation ? { pickupRelation } : {}),
+        },
         include: { child: true },
       })
       return NextResponse.json(record)

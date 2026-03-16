@@ -1,5 +1,8 @@
 // app/(dashboard)/dashboard/page.tsx
 import { prisma } from '@/lib/prisma'
+import { School, ClipboardList, Inbox, Megaphone, Calendar, PlayCircle, AlertTriangle, UserCheck } from 'lucide-react'
+import DashboardClient from './DashboardClient'
+import DashboardBadge from './DashboardBadge'
 
 async function getDashboardData() {
     const activeYear = await prisma.academicYear.findFirst({
@@ -44,12 +47,28 @@ async function getDashboardData() {
             }),
         ])
 
-    const checkInsToday = await prisma.checkIn.findMany({
+    const children = await prisma.child.findMany({
+        where: {
+            enrollments: {
+                some: { academicYearId: activeYear.id, status: 'active' }
+            }
+        },
+        include: {
+            enrollments: {
+                where: { academicYearId: activeYear.id, status: 'active' },
+                include: { level: true },
+                take: 1
+            }
+        }
+    })
+
+    const checkInsTodayArray = await prisma.checkIn.findMany({
         where: { date: today },
         include: { child: true },
         orderBy: { checkInAt: 'desc' },
-        take: 8,
     })
+    
+    const checkInsToday = checkInsTodayArray.slice(0, 8)
 
     return {
         activeYear,
@@ -60,6 +79,8 @@ async function getDashboardData() {
         recentActivities,
         pendingPayments,
         checkInsToday,
+        allChildren: children,
+        allCheckInsToday: checkInsTodayArray,
     }
 }
 
@@ -69,124 +90,120 @@ export default async function DashboardPage() {
     if (!data) {
         return (
             <div className="flex flex-col items-center justify-center h-96 gap-4">
-                <div className="text-6xl animate-pulse">🏫</div>
-                <h2 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>
+                <div className="mb-2"><School size={48} color="var(--muted)" /></div>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--text)' }}>
                     ยังไม่มีปีการศึกษาที่ใช้งานอยู่
                 </h2>
-                <p style={{ color: 'var(--muted)' }} className="text-sm text-center">
+                <p style={{ color: 'var(--muted)' }} className="text-sm text-center max-w-xs">
                     กรุณาไปที่ตั้งค่า → สร้างปีการศึกษาและเปิดใช้งาน
                 </p>
                 <a
                     href="/settings"
-                    className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold btn-primary"
-                    style={{ background: 'var(--leaf)' }}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold btn-primary"
                 >
-                    ⚙️ ไปตั้งค่า
+                    ไปตั้งค่า
                 </a>
             </div>
         )
     }
 
-    const stats = [
-        { label: 'เด็กทั้งหมด', value: data.totalChildren, icon: '👶', color: 'var(--leaf)', bg: '#E8F5EE' },
-        { label: 'มาเรียนวันนี้', value: data.presentToday, icon: '✅', color: '#40916C', bg: '#D8F3DC' },
-        { label: 'ขาดเรียน', value: data.absentToday, icon: '❌', color: 'var(--coral)', bg: '#FFF0ED' },
-        { label: 'ค้างจ่ายค่าเทอม', value: data.pendingPayments, icon: '💳', color: 'var(--sun)', bg: '#FFF8E8' },
-    ]
-
-    const typeIcon: Record<string, string> = {
-        general: '📢', holiday: '🎉', activity: '⚽', emergency: '🚨'
+    const typeIcon: Record<string, React.ReactNode> = {
+        general: <Megaphone size={16} />, holiday: <Calendar size={16} />, activity: <PlayCircle size={16} />, emergency: <AlertTriangle size={16} />
     }
 
     return (
-        <div className="space-y-6 animate-fade-up">
-            {/* Year badge */}
-            <div className="flex items-center gap-2">
-                <span
-                    className="text-xs font-semibold px-3 py-1 rounded-full"
-                    style={{ background: '#E8F5EE', color: 'var(--leaf)' }}
-                >
-                    📚 {data.activeYear.name}
-                </span>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((s, i) => (
-                    <div
-                        key={s.label}
-                        className={`rounded-2xl p-4 animate-fade-up delay-${i + 1}`}
-                        style={{
-                            background: 'white',
-                            border: '1px solid var(--warm)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                        }}
-                    >
-                        <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3"
-                            style={{ background: s.bg }}
-                        >
-                            {s.icon}
-                        </div>
-                        <div className="text-3xl font-bold mb-1" style={{ color: s.color }}>
-                            {s.value}
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--muted)' }}>{s.label}</div>
+        <div className="space-y-5 animate-fade-up">
+            {/* Quick stats — horizontal strip instead of 4 identical cards */}
+            <div
+                className="rounded-2xl p-5 card"
+                style={{ background: 'var(--forest)', border: 'none' }}
+            >
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <p className="text-xs mb-1" style={{ color: 'var(--mint)' }}>
+                            {data.activeYear.name}
+                        </p>
+                        <p className="text-2xl font-bold text-white">
+                            {data.presentToday}
+                            <span className="text-sm font-normal ml-1" style={{ color: 'oklch(1 0 0 / 0.5)' }}>
+                                / {data.totalChildren} คน มาเรียนวันนี้
+                            </span>
+                        </p>
                     </div>
-                ))}
+                    <div className="flex items-center gap-3">
+                        <DashboardBadge />
+                        {[
+                            { label: 'ขาดเรียน', value: data.absentToday, color: 'oklch(0.8 0.1 25)' },
+                            { label: 'ค้างจ่าย', value: data.pendingPayments, color: 'oklch(0.8 0.1 70)' },
+                        ].map(s => (
+                            <div key={s.label} className="text-right">
+                                <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>
+                                <p className="text-xs" style={{ color: 'oklch(1 0 0 / 0.4)' }}>{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* Main content grid */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
                 {/* Check-in today (3 cols) */}
-                <div
-                    className="lg:col-span-3 rounded-2xl p-5"
-                    style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-                >
+                <div className="lg:col-span-3 card rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>
-                            ✅ การเช็กชื่อวันนี้
+                            การเช็กชื่อวันนี้
                         </h3>
-                        <a href="/checkin" className="text-xs" style={{ color: 'var(--sage)' }}>
-                            ดูทั้งหมด →
-                        </a>
+                        <div className="flex gap-2">
+                            <DashboardClient children={data.allChildren} checkInsToday={data.allCheckInsToday} />
+                            <a
+                                href="/checkin"
+                                className="text-xs font-medium px-2.5 py-1 rounded-lg"
+                                style={{ color: 'var(--leaf)', background: 'oklch(0.95 0.02 160)' }}
+                            >
+                                ดูทั้งหมด →
+                            </a>
+                        </div>
                     </div>
 
                     {data.checkInsToday.length === 0 ? (
-                        <div className="py-8 text-center">
-                            <p className="text-4xl mb-2">📋</p>
+                        <div className="py-10 text-center flex flex-col items-center">
+                            <div className="mb-3"><ClipboardList size={36} color="var(--muted)" /></div>
                             <p className="text-sm" style={{ color: 'var(--muted)' }}>ยังไม่มีการเช็กชื่อวันนี้</p>
                         </div>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             {data.checkInsToday.map((c) => (
                                 <div
                                     key={c.id}
-                                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                                    style={{ background: 'var(--cream)' }}
+                                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 table-row"
                                 >
                                     <div
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                                        style={{ background: c.child.gender === 'male' ? '#DBE9F4' : '#FDE8F0', color: c.child.gender === 'male' ? 'var(--sky)' : '#C2185B' }}
+                                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                                        style={{
+                                            background: c.child.gender === 'male'
+                                                ? 'oklch(0.90 0.04 240)' : 'oklch(0.92 0.04 350)',
+                                            color: c.child.gender === 'male'
+                                                ? 'var(--sky)' : 'oklch(0.50 0.12 350)',
+                                        }}
                                     >
                                         {c.child.nickname.slice(0, 1)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
-                                            {c.child.nickname} — {c.child.firstName}
+                                            {c.child.nickname}
                                         </p>
                                         <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                                            🟢 {c.checkInAt
+                                            {c.checkInAt
                                                 ? new Date(c.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
                                                 : '—'}
-                                            {c.checkOutAt && ` · 🔴 ${new Date(c.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`}
+                                            {c.checkOutAt && ` → ${new Date(c.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`}
                                         </p>
                                     </div>
                                     <span
                                         className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
                                         style={c.checkOutAt
-                                            ? { background: '#F0EDEA', color: 'var(--muted)' }
-                                            : { background: '#D8F3DC', color: '#1B4332' }
+                                            ? { background: 'var(--warm)', color: 'var(--muted)' }
+                                            : { background: 'oklch(0.93 0.04 160)', color: 'var(--leaf)' }
                                         }
                                     >
                                         {c.checkOutAt ? 'กลับบ้าน' : 'อยู่ศูนย์'}
@@ -198,51 +215,48 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Announcements (2 cols) */}
-                <div
-                    className="lg:col-span-2 rounded-2xl p-5"
-                    style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-                >
+                <div className="lg:col-span-2 card rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>
-                            📢 ประกาศล่าสุด
+                            ประกาศล่าสุด
                         </h3>
-                        <a href="/announcements" className="text-xs" style={{ color: 'var(--sage)' }}>
+                        <a
+                            href="/announcements"
+                            className="text-xs font-medium px-2.5 py-1 rounded-lg"
+                            style={{ color: 'var(--leaf)', background: 'oklch(0.95 0.02 160)' }}
+                        >
                             ดูทั้งหมด →
                         </a>
                     </div>
 
                     {data.announcements.length === 0 ? (
-                        <div className="py-8 text-center">
-                            <p className="text-3xl mb-2">📭</p>
+                        <div className="py-10 text-center flex flex-col items-center">
+                            <div className="mb-3"><Inbox size={32} color="var(--muted)" /></div>
                             <p className="text-sm" style={{ color: 'var(--muted)' }}>ไม่มีประกาศ</p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                             {data.announcements.map((a) => (
                                 <div
                                     key={a.id}
-                                    className="rounded-xl p-3"
+                                    className="rounded-xl px-3.5 py-3"
                                     style={{
-                                        background: a.isUrgent ? '#FFF0ED' : 'var(--cream)',
-                                        border: a.isUrgent ? '1px solid #F4C0B0' : '1px solid var(--warm)',
+                                        background: a.isUrgent ? 'oklch(0.96 0.03 25)' : 'var(--cream)',
+                                        borderLeft: a.isUrgent ? '3px solid var(--coral)' : '3px solid var(--warm)',
                                     }}
                                 >
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-base shrink-0">{typeIcon[a.type] ?? '📢'}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
-                                                {a.title}
-                                                {a.isUrgent && (
-                                                    <span className="ml-1.5 text-xs font-bold" style={{ color: 'var(--coral)' }}>
-                                                        ด่วน!
-                                                    </span>
-                                                )}
-                                            </p>
-                                            <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--muted)' }}>
-                                                {a.content}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <p className="text-sm font-semibold leading-tight flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                                        <span>{typeIcon[a.type] ?? <Megaphone size={16} />}</span>
+                                        {a.title}
+                                        {a.isUrgent && (
+                                            <span className="ml-1.5 text-xs font-bold" style={{ color: 'var(--coral)' }}>
+                                                ด่วน
+                                            </span>
+                                        )}
+                                    </p>
+                                    <p className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--muted)' }}>
+                                        {a.content}
+                                    </p>
                                 </div>
                             ))}
                         </div>

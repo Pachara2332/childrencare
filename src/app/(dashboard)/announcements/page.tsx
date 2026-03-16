@@ -4,23 +4,19 @@
 import { useEffect, useState } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { Skeleton } from '@/app/components/ui/Skeleton'
+import { Megaphone, Calendar, PlayCircle, AlertTriangle, Inbox, X } from 'lucide-react'
 
 interface Announcement {
-    id: number
-    title: string
-    content: string
-    type: string
-    isUrgent: boolean
-    publishedAt: string
-    expiresAt: string | null
+    id: number; title: string; content: string; type: string
+    isUrgent: boolean; publishedAt: string; expiresAt: string | null
     academicYear: { name: string }
 }
 
-const typeConfig: Record<string, { icon: string; label: string; bg: string; color: string }> = {
-    general: { icon: '📢', label: 'ทั่วไป', bg: '#EFF4FF', color: '#1D3557' },
-    holiday: { icon: '🎉', label: 'วันหยุด', bg: '#F0FFF4', color: '#1B4332' },
-    activity: { icon: '⚽', label: 'กิจกรรม', bg: '#FFF8E8', color: '#7D4E00' },
-    emergency: { icon: '🚨', label: 'ฉุกเฉิน', bg: '#FFF0ED', color: '#9B1C1C' },
+const typeConfig: Record<string, { icon: React.ReactNode; label: string; bg: string; color: string }> = {
+    general: { icon: <Megaphone size={16} />, label: 'ทั่วไป', bg: 'oklch(0.94 0.03 240)', color: 'var(--sky)' },
+    holiday: { icon: <Calendar size={16} />, label: 'วันหยุด', bg: 'oklch(0.93 0.04 160)', color: 'var(--leaf)' },
+    activity: { icon: <PlayCircle size={16} />, label: 'กิจกรรม', bg: 'oklch(0.95 0.04 70)', color: 'var(--sun)' },
+    emergency: { icon: <AlertTriangle size={16} />, label: 'ฉุกเฉิน', bg: 'oklch(0.95 0.04 25)', color: 'var(--coral)' },
 }
 
 export default function AnnouncementsPage() {
@@ -28,19 +24,13 @@ export default function AnnouncementsPage() {
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
     const [filterType, setFilterType] = useState('all')
-    const [form, setForm] = useState({
-        title: '', content: '', type: 'general',
-        isUrgent: false, expiresAt: '',
-    })
+    const [form, setForm] = useState({ title: '', content: '', type: 'general', isUrgent: false, expiresAt: '' })
     const [saving, setSaving] = useState(false)
     const [deleting, setDeleting] = useState<number | null>(null)
 
     const fetch_ = () => {
-        fetch('/api/announcements')
-            .then(r => r.json())
-            .then(d => { setItems(d); setLoading(false) })
+        fetch('/api/announcements').then(r => r.json()).then(d => { setItems(d); setLoading(false) })
     }
-
     useEffect(() => { fetch_() }, [])
 
     const handleSubmit = async () => {
@@ -63,34 +53,29 @@ export default function AnnouncementsPage() {
     }
 
     const filtered = filterType === 'all' ? items : items.filter(a => a.type === filterType)
-    const inputStyle = { border: '1px solid var(--warm)', background: 'white', color: 'var(--text)' }
-    const inputClass = "w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
 
     return (
-        <div className="space-y-5 animate-fade-up">
+        <div className="space-y-4 animate-fade-up">
             {/* Header actions */}
             <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex gap-2 flex-wrap">
-                    {[['all', '📋 ทั้งหมด'], ['general', '📢'], ['holiday', '🎉'], ['activity', '⚽'], ['emergency', '🚨']].map(([val, label]) => (
+                <div className="flex gap-1.5 flex-wrap">
+                    {[['all', 'ทั้งหมด'], ...Object.entries(typeConfig).map(([k, v]) => [k, v.label])].map(([val, label]) => (
                         <button
                             key={val}
                             onClick={() => setFilterType(val)}
-                            className="px-3 py-1.5 rounded-xl text-sm font-semibold transition-all"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{
                                 background: filterType === val ? 'var(--leaf)' : 'white',
                                 color: filterType === val ? 'white' : 'var(--muted)',
                                 border: `1px solid ${filterType === val ? 'var(--leaf)' : 'var(--warm)'}`,
+                                transition: 'all 0.15s var(--ease-out-quart)',
                             }}
                         >
                             {label}
                         </button>
                     ))}
                 </div>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="px-4 py-2 rounded-xl text-white text-sm font-semibold"
-                    style={{ background: 'var(--leaf)' }}
-                >
+                <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl text-sm font-semibold btn-primary">
                     + สร้างประกาศ
                 </button>
             </div>
@@ -99,82 +84,71 @@ export default function AnnouncementsPage() {
             {loading ? (
                 <div className="space-y-3">
                     {[0, 1, 2].map(i => (
-                        <div key={i} className="rounded-2xl p-5" style={{ background: 'white', border: '1px solid var(--warm)' }}>
+                        <div key={i} className="card rounded-2xl p-5">
                             <div className="flex items-start gap-4">
                                 <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
                                 <div className="flex-1">
                                     <Skeleton className="h-4 w-48 mb-2" />
                                     <Skeleton className="h-3 w-full mb-1" />
-                                    <Skeleton className="h-3 w-3/4 mb-3" />
-                                    <div className="flex gap-3">
-                                        <Skeleton className="h-3 w-24" />
-                                        <Skeleton className="h-3 w-20" />
-                                    </div>
+                                    <Skeleton className="h-3 w-3/4" />
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : filtered.length === 0 ? (
-                <div className="text-center py-16 rounded-2xl" style={{ background: 'white', border: '1px solid var(--warm)' }}>
-                    <p className="text-4xl mb-2">📭</p>
+                <div className="text-center py-16 card rounded-2xl flex flex-col items-center">
+                    <div className="mb-3"><Inbox size={32} color="var(--muted)" /></div>
                     <p className="text-sm" style={{ color: 'var(--muted)' }}>ไม่มีประกาศ</p>
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                     {filtered.map(a => {
                         const cfg = typeConfig[a.type] ?? typeConfig.general
                         return (
                             <div
                                 key={a.id}
-                                className="rounded-2xl p-5"
+                                className="card rounded-xl p-4"
                                 style={{
-                                    background: a.isUrgent ? '#FFF5F5' : 'white',
-                                    border: `1px solid ${a.isUrgent ? '#FEB2B2' : 'var(--warm)'}`,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                                    borderLeft: a.isUrgent ? '3px solid var(--coral)' : `3px solid ${cfg.color}`,
                                 }}
                             >
-                                <div className="flex items-start gap-4">
-                                    <div
-                                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                                        style={{ background: cfg.bg }}
-                                    >
-                                        {cfg.icon}
-                                    </div>
-
+                                <div className="flex items-start gap-3">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                                            <h3 className="font-bold text-base" style={{ color: 'var(--text)' }}>{a.title}</h3>
+                                            <h3 className="font-semibold text-sm flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                                                {cfg.icon} {a.title}
+                                            </h3>
                                             <span
-                                                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                                                 style={{ background: cfg.bg, color: cfg.color }}
                                             >
                                                 {cfg.label}
                                             </span>
                                             {a.isUrgent && (
                                                 <span
-                                                    className="text-xs font-bold px-2 py-0.5 rounded-full"
-                                                    style={{ background: '#FEB2B2', color: '#9B1C1C' }}
+                                                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                                    style={{ background: 'oklch(0.95 0.04 25)', color: 'var(--coral)' }}
                                                 >
-                                                    🚨 ด่วน!
+                                                    ด่วน
                                                 </span>
                                             )}
                                         </div>
                                         <p className="text-sm leading-relaxed mb-2" style={{ color: 'var(--text)' }}>{a.content}</p>
                                         <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--muted)' }}>
-                                            <span>📅 {new Date(a.publishedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                            {a.expiresAt && <span>⏰ หมดอายุ {new Date(a.expiresAt).toLocaleDateString('th-TH')}</span>}
-                                            <span>📚 {a.academicYear?.name}</span>
+                                            <span>{new Date(a.publishedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                            {a.expiresAt && <span>หมดอายุ {new Date(a.expiresAt).toLocaleDateString('th-TH')}</span>}
+                                            <span>{a.academicYear?.name}</span>
                                         </div>
                                     </div>
 
                                     <button
                                         onClick={() => handleDelete(a.id)}
                                         disabled={deleting === a.id}
-                                        className="text-xs px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
-                                        style={{ background: '#FFF0ED', color: 'var(--coral)', border: 'none', cursor: 'pointer' }}
+                                        className="text-xs px-2.5 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
+                                        style={{ background: 'oklch(0.95 0.04 25)', color: 'var(--coral)', border: 'none', cursor: 'pointer' }}
                                     >
-                                        {deleting === a.id ? '⏳' : '🗑️'}
+                                        {deleting === a.id ? '...' : <X size={14} />}
                                     </button>
                                 </div>
                             </div>
@@ -183,74 +157,40 @@ export default function AnnouncementsPage() {
                 </div>
             )}
 
-            <Modal open={showForm} onClose={() => setShowForm(false)} title="สร้างประกาศใหม่" icon="📢">
+            <Modal open={showForm} onClose={() => setShowForm(false)} title="สร้างประกาศใหม่" icon={<Megaphone size={20} />}>
                 <div className="space-y-4">
                     <div>
                         <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>ชื่อประกาศ *</label>
-                        <input
-                            value={form.title}
-                            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                            placeholder="หัวข้อประกาศ"
-                            className={`${inputClass} input-field`}
-                        />
+                        <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="หัวข้อประกาศ" className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" />
                     </div>
                     <div>
                         <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>รายละเอียด *</label>
-                        <textarea
-                            value={form.content}
-                            onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
-                            rows={4}
-                            placeholder="รายละเอียดประกาศ..."
-                            className={`${inputClass} input-field`}
-                            style={{ resize: 'vertical' }}
-                        />
+                        <textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={4} placeholder="รายละเอียดประกาศ..." className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" style={{ resize: 'vertical' }} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>ประเภท</label>
-                            <select
-                                value={form.type}
-                                onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                                className={`${inputClass} input-field`}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <option value="general">📢 ทั่วไป</option>
-                                <option value="holiday">🎉 วันหยุด</option>
-                                <option value="activity">⚽ กิจกรรม</option>
-                                <option value="emergency">🚨 ฉุกเฉิน</option>
+                            <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" style={{ cursor: 'pointer' }}>
+                                <option value="general">ทั่วไป</option>
+                                <option value="holiday">วันหยุด</option>
+                                <option value="activity">กิจกรรม</option>
+                                <option value="emergency">ฉุกเฉิน</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>วันหมดอายุ</label>
-                            <input
-                                type="date"
-                                value={form.expiresAt}
-                                onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                                className={`${inputClass} input-field`}
-                            />
+                            <input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" />
                         </div>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={form.isUrgent}
-                            onChange={e => setForm(f => ({ ...f, isUrgent: e.target.checked }))}
-                            className="rounded w-4 h-4"
-                        />
-                        <span className="text-sm font-semibold" style={{ color: 'var(--coral)' }}>
-                            🚨 ทำเครื่องหมายว่าด่วน
-                        </span>
+                        <input type="checkbox" checked={form.isUrgent} onChange={e => setForm(f => ({ ...f, isUrgent: e.target.checked }))} className="rounded w-4 h-4" />
+                        <span className="text-sm font-medium" style={{ color: 'var(--coral)' }}>ทำเครื่องหมายว่าด่วน</span>
                     </label>
                 </div>
-
                 <div className="flex gap-3 mt-5">
                     <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm btn-secondary">ยกเลิก</button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={saving || !form.title || !form.content}
-                        className="flex-1 py-2.5 rounded-xl text-sm btn-primary"
-                    >
-                        {saving ? '⏳ กำลังบันทึก...' : '✅ เผยแพร่'}
+                    <button onClick={handleSubmit} disabled={saving || !form.title || !form.content} className="flex-1 py-2.5 rounded-xl text-sm btn-primary">
+                        {saving ? 'กำลังบันทึก...' : 'เผยแพร่'}
                     </button>
                 </div>
             </Modal>

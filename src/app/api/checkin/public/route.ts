@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const records = await prisma.checkIn.findMany({
     where: { date },
-    select: { childId: true, checkInAt: true, checkOutAt: true },
+    select: { childId: true, checkInAt: true, checkOutAt: true, isAbsent: true, absenceReason: true },
   })
 
   return NextResponse.json(records)

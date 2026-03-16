@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request, { params }: { params: { childId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ childId: string }> }) {
     try {
-        const childId = Number(params.childId)
+        const resolvedParams = await params
+        const childId = Number(resolvedParams.childId)
         if (isNaN(childId)) return NextResponse.json({ error: 'Invalid childId' }, { status: 400 })
 
         const activeYear = await prisma.academicYear.findFirst({

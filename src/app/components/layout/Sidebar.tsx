@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Home, Baby, CheckSquare, Megaphone, TrendingUp, Camera, Wallet, FileText, Settings, Leaf, LogOut, ChevronRight, ChevronLeft, X } from 'lucide-react'
+import { Home, Baby, CheckSquare, Megaphone, TrendingUp, Camera, Wallet, FileText, Settings, Leaf, LogOut, ChevronRight, ChevronLeft, X, PiggyBank } from 'lucide-react'
 import { useChildcareStore } from '@/store/useStore'
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
     { href: '/development', icon: TrendingUp, label: 'พัฒนาการ' },
     { href: '/activities', icon: Camera, label: 'กิจกรรมรายวัน' },
     { href: '/payments', icon: Wallet, label: 'ค่าใช้จ่าย' },
+    { href: '/savings', icon: PiggyBank, label: 'เงินออม' },
     { href: '/reports', icon: FileText, label: 'รายงาน' },
     { href: '/settings', icon: Settings, label: 'ตั้งค่า' },
 ]

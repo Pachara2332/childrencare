@@ -21,7 +21,7 @@ model AcademicYear {
     enrollments   ChildEnrollment[]
     activities    DailyActivity[]
     announcements Announcement[]
-    payments      Payment[]
+    savings       Saving[]
     classLevels   ClassLevel[]
 }
 
@@ -71,7 +71,7 @@ model Child {
     checkIns     CheckIn[]
     developments Development[]
     activities   DailyActivity[]
-    payments     Payment[]
+    savings      Saving[]
 }
 
 // ─── การลงทะเบียนเด็กในแต่ละปี + ระดับชั้น ────────────────────────────────────
@@ -172,31 +172,20 @@ model Announcement {
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 }
 
-// ─── ค่าใช้จ่าย ───────────────────────────────────────────────────────────────
-model Payment {
-    id             Int @id @default(autoincrement())
+// ─── เงินออม ──────────────────────────────────────────────────────────────────
+model Saving {
+    id             Int      @id @default(autoincrement())
     childId        Int
     academicYearId Int
-    month          Int
-    year           Int
-
-    tuitionFee   Float   @default(0)
-    foodFee      Float   @default(0)
-    otherFee     Float   @default(0)
-    otherFeeNote String?
-
-    status     String    @default("pending")
-    paidAt     DateTime?
-    paidMethod String?
-    receiptNo  String?
-    note       String?
-    dueDate    DateTime
-    createdAt  DateTime  @default(now())
+    date           DateTime @db.Date
+    amount         Float    // positive = deposit, negative = withdraw
+    type           String   // "deposit" | "withdraw" | "payout"
+    note           String?
+    recordedBy     String   @default("teacher")
+    createdAt      DateTime @default(now())
 
     child        Child        @relation(fields: [childId], references: [id])
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
-
-    @@unique([childId, academicYearId, month, year])
 }
 
 // ─── Config ─────────────────s──────────────────────────────────────────────────

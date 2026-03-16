@@ -365,71 +365,73 @@ export default function CheckInPage() {
                             <p className="text-sm" style={{ color: 'var(--muted)' }}>ยังไม่มีการเช็กชื่อ{selectedLevelId !== 'all' ? 'ในชั้นนี้' : 'ในวันนี้'}</p>
                         </div>
                     ) : (
-                        <table className="w-full">
-                            <thead>
-                                <tr style={{ background: 'var(--cream)', borderBottom: '1px solid var(--warm)' }}>
-                                    {['เด็ก', 'ชั้น', 'เข้า', 'ออก', 'วิธี', 'สถานะ'].map(h => (
-                                        <th key={h} className="text-left text-xs font-semibold px-4 py-2.5" style={{ color: 'var(--muted)' }}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredRecords.map(r => {
-                                    const lv = getChildLevel(r.childId)
-                                    const lc = lv ? getLevelColor(lv.color) : null
-                                    return (
-                                        <tr key={r.id} className="table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
-                                            <td className="px-4 py-2.5">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                                                        style={{
-                                                            background: r.child.gender === 'male' ? 'oklch(0.90 0.04 240)' : 'oklch(0.92 0.04 350)',
-                                                            color: r.child.gender === 'male' ? 'var(--sky)' : 'oklch(0.50 0.12 350)',
-                                                        }}
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[600px]">
+                                <thead>
+                                    <tr style={{ background: 'var(--cream)', borderBottom: '1px solid var(--warm)' }}>
+                                        {['เด็ก', 'ชั้น', 'เข้า', 'ออก', 'วิธี', 'สถานะ'].map(h => (
+                                            <th key={h} className="text-left text-xs font-semibold px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRecords.map(r => {
+                                        const lv = getChildLevel(r.childId)
+                                        const lc = lv ? getLevelColor(lv.color) : null
+                                        return (
+                                            <tr key={r.id} className="table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
+                                                <td className="px-4 py-2.5">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div
+                                                            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                                                            style={{
+                                                                background: r.child.gender === 'male' ? 'oklch(0.90 0.04 240)' : 'oklch(0.92 0.04 350)',
+                                                                color: r.child.gender === 'male' ? 'var(--sky)' : 'oklch(0.50 0.12 350)',
+                                                            }}
+                                                        >
+                                                            {r.child.nickname.slice(0, 1)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-medium whitespace-nowrap" style={{ color: 'var(--text)' }}>{r.child.nickname}</p>
+                                                            <p className="text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>{r.child.firstName}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-2.5 whitespace-nowrap">
+                                                    {lv && lc ? (
+                                                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: lc.bg, color: lc.text }}>{lv.code}</span>
+                                                    ) : <span className="text-xs" style={{ color: 'var(--muted)' }}>—</span>}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-sm font-mono whitespace-nowrap" style={{ color: 'var(--text)' }}>
+                                                    {r.checkInAt ? new Date(r.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-sm font-mono whitespace-nowrap" style={{ color: 'var(--muted)' }}>
+                                                    {r.checkOutAt ? new Date(r.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>
+                                                    {r.method === 'qr' ? 'QR' : 'ด้วยตนเอง'}
+                                                </td>
+                                                <td className="px-4 py-2.5 whitespace-nowrap">
+                                                    <span
+                                                        className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block"
+                                                        style={r.checkOutAt
+                                                            ? { background: 'var(--warm)', color: 'var(--muted)' }
+                                                            : r.checkInAt
+                                                                ? { background: 'oklch(0.93 0.04 160)', color: 'var(--leaf)' }
+                                                                : r.isAbsent
+                                                                    ? { background: 'oklch(0.95 0.04 250)', color: 'var(--blue)' }
+                                                                    : { background: 'oklch(0.95 0.04 25)', color: 'var(--coral)' }
+                                                        }
                                                     >
-                                                        {r.child.nickname.slice(0, 1)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.child.nickname}</p>
-                                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{r.child.firstName}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                {lv && lc ? (
-                                                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: lc.bg, color: lc.text }}>{lv.code}</span>
-                                                ) : <span className="text-xs" style={{ color: 'var(--muted)' }}>—</span>}
-                                            </td>
-                                            <td className="px-4 py-2.5 text-sm font-mono" style={{ color: 'var(--text)' }}>
-                                                {r.checkInAt ? new Date(r.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                                            </td>
-                                            <td className="px-4 py-2.5 text-sm font-mono" style={{ color: 'var(--muted)' }}>
-                                                {r.checkOutAt ? new Date(r.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                                            </td>
-                                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--muted)' }}>
-                                                {r.method === 'qr' ? 'QR' : 'ด้วยตนเอง'}
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <span
-                                                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                                                    style={r.checkOutAt
-                                                        ? { background: 'var(--warm)', color: 'var(--muted)' }
-                                                        : r.checkInAt
-                                                            ? { background: 'oklch(0.93 0.04 160)', color: 'var(--leaf)' }
-                                                            : r.isAbsent
-                                                                ? { background: 'oklch(0.95 0.04 250)', color: 'var(--blue)' }
-                                                                : { background: 'oklch(0.95 0.04 25)', color: 'var(--coral)' }
-                                                    }
-                                                >
-                                                    {r.checkOutAt ? 'กลับบ้าน' : r.checkInAt ? 'อยู่ศูนย์' : r.isAbsent ? 'ลา' : 'ยังไม่มา'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
+                                                        {r.checkOutAt ? 'กลับบ้าน' : r.checkInAt ? 'อยู่ศูนย์' : r.isAbsent ? 'ลา' : 'ยังไม่มา'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             )}

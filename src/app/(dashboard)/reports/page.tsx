@@ -179,27 +179,27 @@ export default function ReportsPage() {
                     </div>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[700px]">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--warm)' }}>
                                 {['รหัส', 'ชื่อ', 'อายุ', 'ผู้ปกครอง', 'เบอร์', 'เข้าเรียน', 'โรค'].map(h => (
-                                    <th key={h} className="text-left text-xs font-semibold px-4 py-2.5" style={{ color: 'var(--muted)' }}>{h}</th>
+                                    <th key={h} className="text-left text-xs font-semibold px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {data.childrenList.map((c, i) => (
                                 <tr key={i} className="table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
-                                    <td className="px-4 py-2.5 text-xs font-mono" style={{ color: 'var(--muted)' }}>{c.code}</td>
+                                    <td className="px-4 py-2.5 text-xs font-mono whitespace-nowrap" style={{ color: 'var(--muted)' }}>{c.code}</td>
                                     <td className="px-4 py-2.5">
-                                        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{c.nickname}</p>
-                                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{c.name}</p>
+                                        <p className="text-sm font-medium whitespace-nowrap" style={{ color: 'var(--text)' }}>{c.nickname}</p>
+                                        <p className="text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>{c.name}</p>
                                     </td>
-                                    <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--text)' }}>{c.age}</td>
-                                    <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--text)' }}>{c.parent}</td>
-                                    <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--text)' }}>{c.phone}</td>
-                                    <td className="px-4 py-2.5">
-                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                    <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>{c.age}</td>
+                                    <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>{c.parent}</td>
+                                    <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>{c.phone}</td>
+                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block"
                                             style={c.attendanceRate >= 80
                                                 ? { background: 'oklch(0.93 0.04 160)', color: 'var(--leaf)' }
                                                 : c.attendanceRate >= 60
@@ -208,7 +208,7 @@ export default function ReportsPage() {
                                             }
                                         >{c.attendanceRate}%</span>
                                     </td>
-                                    <td className="px-4 py-2.5 text-sm" style={{ color: c.disease ? 'var(--coral)' : 'var(--muted)' }}>
+                                    <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: c.disease ? 'var(--coral)' : 'var(--muted)' }}>
                                         {c.disease ?? '—'}
                                     </td>
                                 </tr>

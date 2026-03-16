@@ -213,12 +213,12 @@ export default function ActivitiesPage() {
 
                     <div>
                         <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>อารมณ์วันนี้</label>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {Object.entries(moodConfig).map(([key, cfg]) => (
                                 <button
                                     key={key}
                                     onClick={() => setForm(f => ({ ...f, mood: key }))}
-                                    className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl"
+                                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl"
                                     style={{
                                         background: form.mood === key ? cfg.bg : 'var(--cream)',
                                         border: `2px solid ${form.mood === key ? 'var(--sage)' : 'transparent'}`,

@@ -167,7 +167,7 @@ export default function AnnouncementsPage() {
                         <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>รายละเอียด *</label>
                         <textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={4} placeholder="รายละเอียดประกาศ..." className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" style={{ resize: 'vertical' }} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>ประเภท</label>
                             <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" style={{ cursor: 'pointer' }}>

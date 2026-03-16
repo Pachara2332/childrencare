@@ -118,7 +118,7 @@ export default async function DashboardPage() {
                 className="rounded-2xl p-5 card"
                 style={{ background: 'var(--forest)', border: 'none' }}
             >
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <p className="text-xs mb-1" style={{ color: 'var(--mint)' }}>
                             {data.activeYear.name}
@@ -130,7 +130,7 @@ export default async function DashboardPage() {
                             </span>
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-2 sm:mt-0">
                         <DashboardBadge />
                         {[
                             { label: 'ขาดเรียน', value: data.absentToday, color: 'oklch(0.8 0.1 25)' },

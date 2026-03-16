@@ -4,6 +4,7 @@
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useChildcareStore } from '@/store/useStore'
+import { Menu } from 'lucide-react'
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
     '/dashboard': { title: 'ภาพรวม', subtitle: 'สรุปสถานะศูนย์ประจำวัน' },
@@ -22,7 +23,7 @@ export default function Header() {
     const [now, setNow] = useState(new Date())
 
     // Zustand Store
-    const { presentCount, fetchPresentCount } = useChildcareStore()
+    const { presentCount, fetchPresentCount, setMobileMenuOpen } = useChildcareStore()
 
     // Match page title
     const pageKey = Object.keys(pageTitles).find(k => pathname.startsWith(k)) ?? '/dashboard'
@@ -58,14 +59,22 @@ export default function Header() {
                 zIndex: 40,
             }}
         >
-            {/* Page info — clean, no accent bar */}
-            <div>
-                <h1 className="font-bold text-base" style={{ color: 'var(--text)', lineHeight: 1.2 }}>
-                    {title}
-                </h1>
-                <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                    {subtitle}
-                </p>
+            {/* Left side: Hamburger (Mobile) + Page info */}
+            <div className="flex items-center gap-3">
+                <button 
+                    onClick={() => setMobileMenuOpen(true)}
+                    className="md:hidden p-1.5 -ml-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                    <Menu size={24} />
+                </button>
+                <div>
+                    <h1 className="font-bold text-base" style={{ color: 'var(--text)', lineHeight: 1.2 }}>
+                        {title}
+                    </h1>
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                        {subtitle}
+                    </p>
+                </div>
             </div>
 
             {/* Right side */}

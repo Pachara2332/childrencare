@@ -139,7 +139,7 @@ export default function ChildrenPage() {
                     </select>
                 </div>
 
-                <div className="ml-auto flex gap-2">
+                <div className="md:ml-auto flex flex-wrap gap-2">
                     {(['roster', 'add', 'import', 'manage-levels'] as MainTab[]).map(t => (
                         <button
                             key={t}
@@ -554,7 +554,7 @@ function ManageLevels({
                             >
                                 {isEdit ? (
                                     <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--muted)' }}>ชื่อระดับชั้น</label>
                                                 <input
@@ -583,7 +583,7 @@ function ManageLevels({
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--muted)' }}>อายุขั้นต่ำ (เดือน)</label>
                                                 <input
@@ -681,7 +681,7 @@ function ManageLevels({
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>
                             Code <span style={{ color: 'var(--coral)' }}>*</span>

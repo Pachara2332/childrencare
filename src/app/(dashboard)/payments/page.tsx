@@ -148,63 +148,65 @@ export default function PaymentsPage() {
                         <p className="text-sm" style={{ color: 'var(--muted)' }}>ไม่มีรายการ</p>
                     </div>
                 ) : (
-                    <table className="w-full">
-                        <thead>
-                            <tr style={{ background: 'var(--cream)', borderBottom: '1px solid var(--warm)' }}>
-                                {['เด็ก', 'ค่าเทอม', 'ค่าอาหาร', 'รวม', 'ครบกำหนด', 'สถานะ', 'จัดการ'].map(h => (
-                                    <th key={h} className="text-left text-xs font-semibold px-4 py-2.5" style={{ color: 'var(--muted)' }}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map(p => {
-                                const sc = statusConfig[p.status] ?? statusConfig.pending
-                                const total = p.tuitionFee + p.foodFee + p.otherFee
-                                return (
-                                    <tr key={p.id} className="table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
-                                        <td className="px-4 py-2.5">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
-                                                    style={{
-                                                        background: p.child.gender === 'male' ? 'oklch(0.90 0.04 240)' : 'oklch(0.92 0.04 350)',
-                                                        color: p.child.gender === 'male' ? 'var(--sky)' : 'oklch(0.50 0.12 350)',
-                                                    }}>{p.child.nickname.slice(0, 1)}</div>
-                                                <div>
-                                                    <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{p.child.nickname}</p>
-                                                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{p.child.firstName}</p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[700px]">
+                            <thead>
+                                <tr style={{ background: 'var(--cream)', borderBottom: '1px solid var(--warm)' }}>
+                                    {['เด็ก', 'ค่าเทอม', 'ค่าอาหาร', 'รวม', 'ครบกำหนด', 'สถานะ', 'จัดการ'].map(h => (
+                                        <th key={h} className="text-left text-xs font-semibold px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map(p => {
+                                    const sc = statusConfig[p.status] ?? statusConfig.pending
+                                    const total = p.tuitionFee + p.foodFee + p.otherFee
+                                    return (
+                                        <tr key={p.id} className="table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
+                                            <td className="px-4 py-2.5">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                                                        style={{
+                                                            background: p.child.gender === 'male' ? 'oklch(0.90 0.04 240)' : 'oklch(0.92 0.04 350)',
+                                                            color: p.child.gender === 'male' ? 'var(--sky)' : 'oklch(0.50 0.12 350)',
+                                                        }}>{p.child.nickname.slice(0, 1)}</div>
+                                                    <div>
+                                                        <p className="text-sm font-medium whitespace-nowrap" style={{ color: 'var(--text)' }}>{p.child.nickname}</p>
+                                                        <p className="text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>{p.child.firstName}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--text)' }}>฿{p.tuitionFee}</td>
-                                        <td className="px-4 py-2.5 text-sm" style={{ color: 'var(--text)' }}>฿{p.foodFee}</td>
-                                        <td className="px-4 py-2.5 text-sm font-bold" style={{ color: 'var(--text)' }}>฿{total.toLocaleString()}</td>
-                                        <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--muted)' }}>
-                                            {new Date(p.dueDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: sc.bg, color: sc.color }}>
-                                                {sc.label}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            {p.status !== 'paid' && p.status !== 'waived' ? (
-                                                <button
-                                                    onClick={() => { setShowPay(p); setPayForm({ paidMethod: 'cash', receiptNo: '', note: '' }) }}
-                                                    className="text-xs px-3 py-1.5 rounded-lg font-semibold btn-primary"
-                                                >
-                                                    บันทึกชำระ
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                                                    {p.paidAt ? new Date(p.paidAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '—'}
+                                            </td>
+                                            <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{p.tuitionFee}</td>
+                                            <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{p.foodFee}</td>
+                                            <td className="px-4 py-2.5 text-sm font-bold whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{total.toLocaleString()}</td>
+                                            <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>
+                                                {new Date(p.dueDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                            </td>
+                                            <td className="px-4 py-2.5 whitespace-nowrap">
+                                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block" style={{ background: sc.bg, color: sc.color }}>
+                                                    {sc.label}
                                                 </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                                            </td>
+                                            <td className="px-4 py-2.5 whitespace-nowrap">
+                                                {p.status !== 'paid' && p.status !== 'waived' ? (
+                                                    <button
+                                                        onClick={() => { setShowPay(p); setPayForm({ paidMethod: 'cash', receiptNo: '', note: '' }) }}
+                                                        className="text-xs px-3 py-1.5 rounded-lg font-semibold btn-primary whitespace-nowrap"
+                                                    >
+                                                        บันทึกชำระ
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>
+                                                        {p.paidAt ? new Date(p.paidAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '—'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 
@@ -217,7 +219,7 @@ export default function PaymentsPage() {
                             {children.map(c => <option key={c.id} value={c.id}>{c.nickname} — {c.firstName}</option>)}
                         </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {[['ค่าเทอม', 'tuitionFee'], ['ค่าอาหาร', 'foodFee'], ['ค่าอื่นๆ', 'otherFee']].map(([label, key]) => (
                             <div key={key}>
                                 <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>{label} (฿)</label>

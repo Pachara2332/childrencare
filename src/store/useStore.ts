@@ -19,6 +19,9 @@ interface ChildcareState {
   academicYears: AcademicYear[]
   activeYear: AcademicYear | null
   
+  // UI State
+  mobileMenuOpen: boolean
+  
   // Loading states
   loading: {
     stats: boolean
@@ -29,6 +32,7 @@ interface ChildcareState {
   fetchPresentCount: () => Promise<void>
   fetchAcademicYears: () => Promise<void>
   setActiveYear: (year: AcademicYear | null) => void
+  setMobileMenuOpen: (open: boolean) => void
 }
 
 export const useChildcareStore = create<ChildcareState>((set, get) => ({
@@ -36,6 +40,7 @@ export const useChildcareStore = create<ChildcareState>((set, get) => ({
   presentCount: null,
   academicYears: [],
   activeYear: null,
+  mobileMenuOpen: false,
   loading: {
     stats: false,
     years: false,
@@ -72,4 +77,5 @@ export const useChildcareStore = create<ChildcareState>((set, get) => ({
   },
 
   setActiveYear: (year) => set({ activeYear: year }),
+  setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
 }))

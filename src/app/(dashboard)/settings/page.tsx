@@ -94,7 +94,7 @@ export default function SettingsPage() {
                     {/* Create year */}
                     <div className="card rounded-2xl p-5">
                         <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text)' }}>สร้างปีการศึกษาใหม่</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>ปี (พ.ศ.)</label>
                                 <input value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} placeholder="2568" className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" />
@@ -111,7 +111,7 @@ export default function SettingsPage() {
                                 <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>วันสิ้นสุด</label>
                                 <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" />
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1 sm:col-span-2">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="rounded w-4 h-4" />
                                     <span className="text-sm" style={{ color: 'var(--text)' }}>ตั้งเป็นปีการศึกษาปัจจุบัน</span>
@@ -135,7 +135,7 @@ export default function SettingsPage() {
                             </div>
                         ) : (
                             years.map(y => (
-                                <div key={y.id} className="flex items-center gap-3 px-5 py-3 table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
+                                <div key={y.id} className="flex items-center gap-3 px-4 py-3 sm:px-5 flex-wrap" style={{ borderBottom: '1px solid var(--warm)' }}>
                                     <div className="w-2 h-8 rounded-full shrink-0" style={{ background: y.isActive ? 'var(--sage)' : 'var(--sand)' }} />
                                     <div className="flex-1">
                                         <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>

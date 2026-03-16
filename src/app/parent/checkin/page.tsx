@@ -278,7 +278,7 @@ function ParentCheckIn() {
                                             setPendingSiblings(prev => prev.filter(x => x.id !== s.id))
                                         }}
                                         disabled={processing === s.id}
-                                        className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-50 flex items-center gap-1"
+                                        className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-50 flex items-center gap-1"
                                         style={{ background: 'var(--sage)', boxShadow: '0 2px 8px rgba(82,183,136,0.3)' }}
                                     >
                                         {processing === s.id ? <Loader2 size={14} className="animate-spin" /> : <><LogIn size={14} /> เช็กเข้า</>}
@@ -364,7 +364,7 @@ function ParentCheckIn() {
                                                 <button
                                                     onClick={() => setCheckoutChild({ id: child.id, nickname: child.nickname })}
                                                     disabled={isProcessing}
-                                                    className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                                    className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
                                                     style={{ background: '#FFF0ED', color: 'var(--coral)', border: '1px solid #F4C0B0' }}
                                                 >
                                                     {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <><LogOut size={14} /> รับกลับ</>}
@@ -384,7 +384,7 @@ function ParentCheckIn() {
                                                     <button
                                                         onClick={() => handleAction(child.id, 'in')}
                                                         disabled={isProcessing}
-                                                        className="px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                                        className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 flex items-center gap-1.5"
                                                         style={{ background: 'var(--sage)', boxShadow: '0 4px 12px rgba(82,183,136,0.3)' }}
                                                     >
                                                         {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <><LogIn size={14} /> ส่งเด็ก</>}

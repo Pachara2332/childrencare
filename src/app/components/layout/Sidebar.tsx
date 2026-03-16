@@ -3,8 +3,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
-import { Home, Baby, CheckSquare, Megaphone, TrendingUp, Camera, Wallet, FileText, Settings, Leaf, LogOut, ChevronRight, ChevronLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Home, Baby, CheckSquare, Megaphone, TrendingUp, Camera, Wallet, FileText, Settings, Leaf, LogOut, ChevronRight, ChevronLeft, X } from 'lucide-react'
+import { useChildcareStore } from '@/store/useStore'
 
 const navItems = [
     { href: '/dashboard', icon: Home, label: 'ภาพรวม' },
@@ -21,6 +22,12 @@ const navItems = [
 export default function Sidebar() {
     const pathname = usePathname()
     const [collapsed, setCollapsed] = useState(false)
+    const { mobileMenuOpen, setMobileMenuOpen } = useChildcareStore()
+
+    // Close mobile menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false)
+    }, [pathname, setMobileMenuOpen])
 
     const handleLogout = async () => {
         await fetch('/api/auth/pin', { method: 'DELETE' })
@@ -28,14 +35,22 @@ export default function Sidebar() {
     }
 
     return (
-        <aside
-            className="flex flex-col shrink-0 h-full"
-            style={{
-                width: collapsed ? 68 : 220,
-                background: 'var(--forest)',
-                transition: 'width 0.3s var(--ease-out-expo)',
-            }}
-        >
+        <>
+            {/* Mobile Backdrop */}
+            {mobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/40 z-40 md:hidden animate-fade-in"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            <aside
+                className={`flex flex-col shrink-0 h-full fixed md:relative z-50 transform transition-transform duration-300 ease-out md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                style={{
+                    width: collapsed ? 68 : 250, // Slightly wider for better touch targets
+                    background: 'var(--forest)',
+                }}
+            >
             {/* Logo */}
             <div
                 className="flex items-center gap-3 shrink-0"
@@ -52,7 +67,7 @@ export default function Sidebar() {
                     <Leaf size={20} color="white" />
                 </div>
                 {!collapsed && (
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden flex-1">
                         <p className="text-white text-xs font-semibold leading-tight truncate">
                             ศูนย์พัฒนาเด็กเล็ก
                         </p>
@@ -61,6 +76,13 @@ export default function Sidebar() {
                         </p>
                     </div>
                 )}
+                {/* Close button on mobile */}
+                <button 
+                    className="md:hidden ml-auto p-1.5 text-white/70 hover:text-white"
+                    onClick={() => setMobileMenuOpen(false)}
+                >
+                    <X size={20} />
+                </button>
             </div>
 
             {/* Nav */}
@@ -139,6 +161,7 @@ export default function Sidebar() {
                     {!collapsed && <span className="text-sm">ออกจากระบบ</span>}
                 </button>
             </div>
-        </aside>
+            </aside>
+        </>
     )
 }

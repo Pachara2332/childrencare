@@ -144,7 +144,7 @@ export default function DashboardClient({
                                         <button 
                                             onClick={() => handleManualCheckIn(child.id, 'in')} 
                                             disabled={processing === child.id}
-                                            className="px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 text-white flex items-center gap-1"
+                                            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 text-white flex items-center gap-1"
                                             style={{ background: 'var(--sage)', boxShadow: '0 2px 8px rgba(82,183,136,0.3)' }}
                                         >
                                             {processing === child.id ? <Loader2 size={14} className="animate-spin" /> : 'เข้า'}
@@ -154,7 +154,7 @@ export default function DashboardClient({
                                         <button
                                             onClick={() => handleManualCheckIn(child.id, 'out')}
                                             disabled={processing === child.id}
-                                            className="px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1"
+                                            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1"
                                             style={{ background: '#FFF0ED', color: 'var(--coral)', border: '1px solid #F4C0B0' }}
                                         >
                                             {processing === child.id ? <Loader2 size={14} className="animate-spin" /> : 'ออก'}

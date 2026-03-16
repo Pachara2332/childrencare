@@ -50,36 +50,6 @@ export async function GET(req: NextRequest) {
         }
     });
 
-    // Payments summary
-    const payments = await prisma.payment.findMany({
-        where: { academicYearId: academicYear.id, month, year }
-    });
-
-    const paySumMap = {
-        paid: { count: 0, amount: 0 },
-        pending: { count: 0, amount: 0 },
-        overdue: { count: 0, amount: 0 },
-    };
-
-    payments.forEach(p => {
-        const totalAmount = p.tuitionFee + p.foodFee + p.otherFee;
-        let status = p.status;
-        if (status === 'pending' && p.dueDate < new Date()) {
-            status = 'overdue';
-        }
-        if (paySumMap[status as keyof typeof paySumMap]) { 
-            paySumMap[status as keyof typeof paySumMap].count++;
-            paySumMap[status as keyof typeof paySumMap].amount += totalAmount;
-        }
-    });
-
-    const paymentSummary = Object.entries(paySumMap).map(([status, data]) => ({
-        status, ...data
-    }));
-
-    const totalRevenue = paySumMap.paid.amount;
-    const pendingRevenue = paySumMap.pending.amount + paySumMap.overdue.amount;
-
     const childrenList = children.map(c => {
         const ageDifMs = Date.now() - c.dateOfBirth.getTime();
         const ageDate = new Date(ageDifMs);
@@ -117,14 +87,6 @@ export async function GET(req: NextRequest) {
         teacherCount: 2, // Default mock count
         avgAttendance: 95, // Default mock count
         presentToday: checkinsTodayCount,
-        totalRevenue,
-        pendingRevenue,
-        monthlyAttendance: [
-             { month: thaiMonths[month > 2 ? month-3 : 0] || 'ม.ค.', rate: 90, count: totalChildren },
-             { month: thaiMonths[month > 1 ? month-2 : 0] || 'ก.พ.', rate: 92, count: totalChildren },
-             { month: thaiMonths[month-1] || 'มี.ค.', rate: 95, count: totalChildren },
-        ],
-        paymentSummary,
         childrenList
     });
 

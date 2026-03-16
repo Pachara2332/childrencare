@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'react'
 import Modal from '@/app/components/ui/Modal'
-import { MessageCircle, Activity, Brain, Heart, Users, TrendingUp, Scale, Ruler } from 'lucide-react'
+import { MessageCircle, Activity, Brain, Heart, Users, TrendingUp, Scale, Ruler, Download } from 'lucide-react'
+import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 interface Child { id: number; code: string; nickname: string; firstName: string; gender: string }
 interface Development {
@@ -107,12 +108,46 @@ export default function DevelopmentPage() {
                         </button>
                     ))}
                 </div>
-                <button
-                    onClick={() => { setForm(f => ({ ...f, childId: String(selectedChild ?? '') })); setShowForm(true) }}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0 btn-primary"
-                >
-                    + บันทึก
-                </button>
+                <div className="flex gap-1.5 shrink-0">
+                    <button
+                        onClick={() => {
+                            if (!child) return
+                            const headers = ['วันที่', 'น้ำหนัก(kg)', 'ส่วนสูง(cm)', 'ภาษา', 'ร่างกาย', 'สติปัญญา', 'อารมณ์', 'สังคม', 'หมายเหตุ']
+                            const rows = records.map(r => [
+                                new Date(r.recordedAt).toLocaleDateString('th-TH'),
+                                r.weight, r.height, r.scoreLanguage, r.scorePhysical,
+                                r.scoreIntellect, r.scoreEmotional, r.scoreSocial, r.note,
+                            ])
+                            exportCSV(headers, rows, `dev-${child.nickname}`)
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> CSV
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (!child) return
+                            const headers = ['วันที่', 'น้ำหนัก(kg)', 'ส่วนสูง(cm)', 'ภาษา', 'ร่างกาย', 'สติปัญญา', 'อารมณ์', 'สังคม', 'หมายเหตุ']
+                            const rows = records.map(r => [
+                                new Date(r.recordedAt).toLocaleDateString('th-TH'),
+                                r.weight, r.height, r.scoreLanguage, r.scorePhysical,
+                                r.scoreIntellect, r.scoreEmotional, r.scoreSocial, r.note,
+                            ])
+                            exportPDF(`พัฒนาการ — ${child.nickname}`, headers, rows, `dev-${child.nickname}`)
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> PDF
+                    </button>
+                    <button
+                        onClick={() => { setForm(f => ({ ...f, childId: String(selectedChild ?? '') })); setShowForm(true) }}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0 btn-primary"
+                    >
+                        + บันทึก
+                    </button>
+                </div>
             </div>
 
             {child && (

@@ -4,11 +4,12 @@
 import { useEffect, useState } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { StatsCardsSkeleton, TableSkeleton } from '@/app/components/ui/Skeleton'
-import { CreditCard, Coins, CheckCircle, Banknote, Smartphone } from 'lucide-react'
+import { CreditCard, Coins, CheckCircle, Banknote, Smartphone, Download } from 'lucide-react'
+import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 interface Payment {
     id: number; childId: number; month: number; year: number
-    tuitionFee: number; foodFee: number; otherFee: number
+    maintenanceFee: number; foodFee: number; otherFee: number
     otherFeeNote: string | null; status: string
     paidAt: string | null; paidMethod: string | null
     receiptNo: string | null; note: string | null; dueDate: string
@@ -41,7 +42,7 @@ export default function PaymentsPage() {
 
     const [addForm, setAddForm] = useState({
         childId: '', month: String(now.getMonth() + 1), year: String(now.getFullYear()),
-        tuitionFee: '500', foodFee: '300', otherFee: '0', otherFeeNote: '', dueDate: '', note: '',
+        maintenanceFee: '0', foodFee: '300', otherFee: '0', otherFeeNote: '', dueDate: '', note: '',
     })
     const [payForm, setPayForm] = useState({ paidMethod: 'cash', receiptNo: '', note: '' })
 
@@ -68,7 +69,7 @@ export default function PaymentsPage() {
             body: JSON.stringify({
                 ...addForm,
                 childId: Number(addForm.childId), month: Number(addForm.month), year: Number(addForm.year),
-                tuitionFee: Number(addForm.tuitionFee), foodFee: Number(addForm.foodFee), otherFee: Number(addForm.otherFee),
+                maintenanceFee: Number(addForm.maintenanceFee), foodFee: Number(addForm.foodFee), otherFee: Number(addForm.otherFee),
             }),
         })
         if (res.ok) { setShowAdd(false); fetchPayments() }
@@ -88,8 +89,8 @@ export default function PaymentsPage() {
     }
 
     const filtered = filterStatus === 'all' ? payments : payments.filter(p => p.status === filterStatus)
-    const totalCollected = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.tuitionFee + p.foodFee + p.otherFee, 0)
-    const totalPending = payments.filter(p => p.status !== 'paid' && p.status !== 'waived').reduce((s, p) => s + p.tuitionFee + p.foodFee + p.otherFee, 0)
+    const totalCollected = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.maintenanceFee + p.foodFee + p.otherFee, 0)
+    const totalPending = payments.filter(p => p.status !== 'paid' && p.status !== 'waived').reduce((s, p) => s + p.maintenanceFee + p.foodFee + p.otherFee, 0)
     const payRate = payments.length ? Math.round(payments.filter(p => p.status === 'paid').length / payments.length * 100) : 0
 
     return (
@@ -100,9 +101,53 @@ export default function PaymentsPage() {
                     {thaiMonths.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
                 <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="w-24 px-3 py-1.5 rounded-lg text-sm input-field" />
-                <button onClick={() => setShowAdd(true)} className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold btn-primary">
-                    + เพิ่มรายการ
-                </button>
+                <div className="ml-auto flex items-center gap-2">
+                    <button
+                        onClick={() => {
+                            const headers = ['ชื่อเล่น', 'ชื่อ-สกุล', 'เดือน', 'ค่าอาหาร', 'ค่าบำรุง', 'ค่าอื่น', 'รวม', 'สถานะ', 'วันชำระ']
+                            const rows = filtered.map(p => [
+                                p.child.nickname,
+                                `${p.child.firstName} ${p.child.lastName}`,
+                                `${thaiMonths[p.month - 1]} ${p.year}`,
+                                p.foodFee, p.maintenanceFee, p.otherFee,
+                                p.foodFee + p.maintenanceFee + p.otherFee,
+                                statusConfig[p.status]?.label ?? p.status,
+                                p.paidAt ? new Date(p.paidAt).toLocaleDateString('th-TH') : '-',
+                            ])
+                            exportCSV(headers, rows, `payments-${selectedMonth}-${selectedYear}`)
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> CSV
+                    </button>
+                    <button
+                        onClick={() => {
+                            const headers = ['ชื่อเล่น', 'ชื่อ-สกุล', 'เดือน', 'ค่าอาหาร', 'ค่าบำรุง', 'ค่าอื่น', 'รวม', 'สถานะ', 'วันชำระ']
+                            const rows = filtered.map(p => [
+                                p.child.nickname,
+                                `${p.child.firstName} ${p.child.lastName}`,
+                                `${thaiMonths[p.month - 1]} ${p.year}`,
+                                p.foodFee, p.maintenanceFee, p.otherFee,
+                                p.foodFee + p.maintenanceFee + p.otherFee,
+                                statusConfig[p.status]?.label ?? p.status,
+                                p.paidAt ? new Date(p.paidAt).toLocaleDateString('th-TH') : '-',
+                            ])
+                            exportPDF(`รายงานการชำระเงิน`, headers, rows, `payments-${selectedMonth}-${selectedYear}`, [
+                                { label: 'เดือน', value: `${thaiMonths[selectedMonth - 1]} ${selectedYear}` },
+                                { label: 'รับแล้ว', value: `฿${totalCollected.toLocaleString()}` },
+                                { label: 'รอชำระ', value: `฿${totalPending.toLocaleString()}` },
+                            ])
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> PDF
+                    </button>
+                    <button onClick={() => setShowAdd(true)} className="px-4 py-2 rounded-xl text-sm font-semibold btn-primary">
+                        + เพิ่มรายการ
+                    </button>
+                </div>
             </div>
 
             {/* Stats strip */}
@@ -152,7 +197,7 @@ export default function PaymentsPage() {
                         <table className="w-full min-w-[700px]">
                             <thead>
                                 <tr style={{ background: 'var(--cream)', borderBottom: '1px solid var(--warm)' }}>
-                                    {['เด็ก', 'ค่าเทอม', 'ค่าอาหาร', 'รวม', 'ครบกำหนด', 'สถานะ', 'จัดการ'].map(h => (
+                                    {['เด็ก', 'ค่าบำรุงศูนย์ฯ', 'ค่าอาหาร', 'รวม', 'ครบกำหนด', 'สถานะ', 'จัดการ'].map(h => (
                                         <th key={h} className="text-left text-xs font-semibold px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{h}</th>
                                     ))}
                                 </tr>
@@ -160,7 +205,7 @@ export default function PaymentsPage() {
                             <tbody>
                                 {filtered.map(p => {
                                     const sc = statusConfig[p.status] ?? statusConfig.pending
-                                    const total = p.tuitionFee + p.foodFee + p.otherFee
+                                    const total = p.maintenanceFee + p.foodFee + p.otherFee
                                     return (
                                         <tr key={p.id} className="table-row" style={{ borderBottom: '1px solid var(--warm)' }}>
                                             <td className="px-4 py-2.5">
@@ -176,7 +221,7 @@ export default function PaymentsPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{p.tuitionFee}</td>
+                                            <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{p.maintenanceFee}</td>
                                             <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{p.foodFee}</td>
                                             <td className="px-4 py-2.5 text-sm font-bold whitespace-nowrap" style={{ color: 'var(--text)' }}>฿{total.toLocaleString()}</td>
                                             <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>
@@ -211,7 +256,7 @@ export default function PaymentsPage() {
             </div>
 
             {/* Add Modal */}
-            <Modal open={showAdd} onClose={() => setShowAdd(false)} title="เพิ่มรายการค่าเทอม" icon={<Coins size={20} />}>
+            <Modal open={showAdd} onClose={() => setShowAdd(false)} title="เพิ่มรายการค่าใช้จ่าย" icon={<Coins size={20} />}>
                 <div className="space-y-3">
                     <div>
                         <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>เด็ก</label>
@@ -220,7 +265,7 @@ export default function PaymentsPage() {
                         </select>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {[['ค่าเทอม', 'tuitionFee'], ['ค่าอาหาร', 'foodFee'], ['ค่าอื่นๆ', 'otherFee']].map(([label, key]) => (
+                        {[['ค่าบำรุงศูนย์ฯ', 'maintenanceFee'], ['ค่าอาหาร', 'foodFee'], ['ค่าอื่นๆ', 'otherFee']].map(([label, key]) => (
                             <div key={key}>
                                 <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>{label} (฿)</label>
                                 <input type="number" value={addForm[key as keyof typeof addForm] as string} onChange={e => setAddForm(f => ({ ...f, [key]: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl text-sm input-field" />
@@ -245,7 +290,7 @@ export default function PaymentsPage() {
                 {showPay && (
                     <>
                         <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
-                            {showPay.child.nickname} — ฿{(showPay.tuitionFee + showPay.foodFee + showPay.otherFee).toLocaleString()}
+                            {showPay.child.nickname} — ฿{(showPay.maintenanceFee + showPay.foodFee + showPay.otherFee).toLocaleString()}
                         </p>
                         <div className="space-y-3">
                             <div>

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       childId, academicYearId, month, year,
-      tuitionFee, foodFee, otherFee, otherFeeNote, dueDate
+      maintenanceFee, foodFee, otherFee, otherFeeNote, dueDate
     } = body
 
     if (!childId || !academicYearId || !month || !year || !dueDate) {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         academicYearId: Number(academicYearId),
         month: Number(month),
         year: Number(year),
-        tuitionFee: tuitionFee ? Number(tuitionFee) : 0,
+        maintenanceFee: maintenanceFee ? Number(maintenanceFee) : 0,
         foodFee: foodFee ? Number(foodFee) : 0,
         otherFee: otherFee ? Number(otherFee) : 0,
         otherFeeNote: otherFeeNote || null,

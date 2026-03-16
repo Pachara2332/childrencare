@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { CardGridSkeleton } from '@/app/components/ui/Skeleton'
-import { Smile, Meh, Frown, Thermometer, Utensils, Moon, FileText, Camera } from 'lucide-react'
+import { Smile, Meh, Frown, Thermometer, Utensils, Moon, FileText, Camera, Download } from 'lucide-react'
+import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 interface Child { id: number; nickname: string; firstName: string; gender: string }
 interface Activity {
@@ -99,12 +100,59 @@ export default function ActivitiesPage() {
                         บันทึกแล้ว {activities.length}/{children.length} คน
                     </span>
                 </div>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold btn-primary"
-                >
-                    + บันทึกกิจกรรม
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => {
+                            const headers = ['ชื่อเล่น', 'ชื่อจริง', 'อารมณ์', 'อาหาร', 'นอน(นาที)', 'กิจกรรม', 'หมายเหตุครู']
+                            const rows = children.map(c => {
+                                const act = getActivity(c.id)
+                                return [
+                                    c.nickname, c.firstName,
+                                    act?.mood ? (moodConfig[act.mood]?.label ?? '-') : '-',
+                                    act?.meals ?? '-',
+                                    act?.sleepMinutes ?? '-',
+                                    act?.activities?.join(', ') ?? '-',
+                                    act?.teacherNote ?? '-',
+                                ]
+                            })
+                            exportCSV(headers, rows, `activities-${date}`)
+                        }}
+                        className="px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> CSV
+                    </button>
+                    <button
+                        onClick={() => {
+                            const headers = ['ชื่อเล่น', 'ชื่อจริง', 'อารมณ์', 'อาหาร', 'นอน(นาที)', 'กิจกรรม', 'หมายเหตุครู']
+                            const rows = children.map(c => {
+                                const act = getActivity(c.id)
+                                return [
+                                    c.nickname, c.firstName,
+                                    act?.mood ? (moodConfig[act.mood]?.label ?? '-') : '-',
+                                    act?.meals ?? '-',
+                                    act?.sleepMinutes ?? '-',
+                                    act?.activities?.join(', ') ?? '-',
+                                    act?.teacherNote ?? '-',
+                                ]
+                            })
+                            exportPDF(`กิจกรรมประจำวัน — ${date}`, headers, rows, `activities-${date}`, [
+                                { label: 'วันที่', value: new Date(date).toLocaleDateString('th-TH') },
+                                { label: 'บันทึกแล้ว', value: `${activities.length}/${children.length} คน` },
+                            ])
+                        }}
+                        className="px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> PDF
+                    </button>
+                    <button
+                        onClick={() => setShowForm(true)}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold btn-primary"
+                    >
+                        + บันทึกกิจกรรม
+                    </button>
+                </div>
             </div>
 
             {/* Progress bar */}

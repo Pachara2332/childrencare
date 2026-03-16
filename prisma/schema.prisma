@@ -23,6 +23,7 @@ model AcademicYear {
     announcements Announcement[]
     savings       Saving[]
     classLevels   ClassLevel[]
+    payments      Payment[]
 }
 
 // ─── ระดับชั้น (เตรียมอนุบาล / อนุบาล 1 / อนุบาล 2 ...) ─────────────────────
@@ -72,6 +73,7 @@ model Child {
     developments Development[]
     activities   DailyActivity[]
     savings      Saving[]
+    payments     Payment[]
 }
 
 // ─── การลงทะเบียนเด็กในแต่ละปี + ระดับชั้น ────────────────────────────────────
@@ -188,9 +190,35 @@ model Saving {
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 }
 
-// ─── Config ─────────────────s──────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 model AppConfig {
     id    Int    @id @default(autoincrement())
     key   String @unique
     value Json
+}
+
+// ─── การชำระเงิน (ค่าอาหารและค่าบำรุงศูนย์) ────────────────────────────────────────────────
+model Payment {
+    id             Int      @id @default(autoincrement())
+    childId        Int
+    academicYearId Int
+    month          Int
+    year           Int
+    foodFee        Float    @default(0) // ค่าอาหารกลางวัน
+    maintenanceFee Float    @default(0) // ค่าบำรุงศูนย์พัฒนาเด็กเล็ก
+    otherFee       Float    @default(0) // ค่าอื่นๆ
+    otherFeeNote   String?
+    dueDate        DateTime @db.Date
+    status         String   @default("pending") // "pending" | "paid" | "overdue" | "waived"
+    paidAt         DateTime?
+    paidMethod     String?  // "cash" | "transfer"
+    receiptNo      String?
+    note           String?
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    child        Child        @relation(fields: [childId], references: [id])
+    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+    @@unique([childId, academicYearId, month, year])
 }

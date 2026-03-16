@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PiggyBank, TrendingUp, TrendingDown, BookOpen, AlertCircle, ChevronDown, ChevronUp, Wallet, FileText } from 'lucide-react'
+import { PiggyBank, TrendingUp, TrendingDown, BookOpen, AlertCircle, ChevronDown, ChevronUp, Wallet, FileText, Download } from 'lucide-react'
+import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 type TabType = 'overview' | 'record' | 'payout' | 'history'
 
@@ -231,6 +232,44 @@ export default function SavingsPage() {
                 <div>
                     <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>ระบบเงินออม</h1>
                     <p className="text-sm" style={{ color: 'var(--muted)' }}>จัดการบันทึกการฝาก-ถอนเงินออมของเด็ก</p>
+                </div>
+                <div className="ml-auto flex gap-1.5">
+                    <button
+                        onClick={() => {
+                            if (!summary) return
+                            const headers = ['ชื่อเล่น', 'ชื่อ-สกุล', 'ชั้น', 'ยอดเงินออม']
+                            const rows: (string | number)[][] = []
+                            summary.byClass.forEach(cls => {
+                                cls.children.forEach(ch => {
+                                    rows.push([ch.nickname, `${ch.firstName} ${ch.lastName}`, cls.name, ch.balance])
+                                })
+                            })
+                            exportCSV(headers, rows, 'savings-summary')
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> CSV
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (!summary) return
+                            const headers = ['ชื่อเล่น', 'ชื่อ-สกุล', 'ชั้น', 'ยอดเงินออม']
+                            const rows: (string | number)[][] = []
+                            summary.byClass.forEach(cls => {
+                                cls.children.forEach(ch => {
+                                    rows.push([ch.nickname, `${ch.firstName} ${ch.lastName}`, cls.name, ch.balance])
+                                })
+                            })
+                            exportPDF('รายงานเงินออม', headers, rows, 'savings-summary', [
+                                { label: 'ยอดรวม', value: `฿${summary.totalAll.toLocaleString()}` },
+                            ])
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                        style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                    >
+                        <Download size={12} /> PDF
+                    </button>
                 </div>
             </div>
 

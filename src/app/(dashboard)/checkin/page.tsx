@@ -7,8 +7,9 @@ import { StatsSkeleton, TableSkeleton } from '@/app/components/ui/Skeleton'
 import PickupDialog from '@/app/components/ui/PickupDialog'
 import AbsenceDialog from '@/app/components/ui/AbsenceDialog'
 import { useChildcareStore } from '@/store/useStore'
-import { ClipboardList, Search, Check, Users, LogIn, Loader2, Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { ClipboardList, Search, Check, Users, LogIn, Loader2, Wifi, WifiOff, RefreshCw, Download } from 'lucide-react'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
+import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 interface Child {
     id: number; code: string; nickname: string
@@ -291,6 +292,57 @@ export default function CheckInPage() {
                             onChange={e => setSelectedDate(e.target.value)}
                             className="px-3 py-1.5 rounded-lg text-sm input-field w-full sm:w-auto"
                         />
+                        <div className="flex gap-1.5">
+                            <button
+                                onClick={() => {
+                                    const headers = ['ชื่อเล่น', 'ชื่อจริง', 'ชั้น', 'เวลาเข้า', 'เวลาออก', 'วิธี', 'สถานะ']
+                                    const rows = filteredRecords.map(r => {
+                                        const lv = getChildLevel(r.childId)
+                                        return [
+                                            r.child.nickname,
+                                            r.child.firstName,
+                                            lv?.code ?? '-',
+                                            r.checkInAt ? new Date(r.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-',
+                                            r.checkOutAt ? new Date(r.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-',
+                                            r.method === 'qr' ? 'QR' : 'ด้วยตนเอง',
+                                            r.checkOutAt ? 'กลับบ้าน' : r.checkInAt ? 'อยู่ศูนย์' : r.isAbsent ? 'ลา' : 'ยังไม่มา',
+                                        ]
+                                    })
+                                    exportCSV(headers, rows, `checkin-${selectedDate}`)
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                                style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                            >
+                                <Download size={12} /> CSV
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const headers = ['ชื่อเล่น', 'ชื่อจริง', 'ชั้น', 'เวลาเข้า', 'เวลาออก', 'วิธี', 'สถานะ']
+                                    const rows = filteredRecords.map(r => {
+                                        const lv = getChildLevel(r.childId)
+                                        return [
+                                            r.child.nickname,
+                                            r.child.firstName,
+                                            lv?.code ?? '-',
+                                            r.checkInAt ? new Date(r.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-',
+                                            r.checkOutAt ? new Date(r.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-',
+                                            r.method === 'qr' ? 'QR' : 'ด้วยตนเอง',
+                                            r.checkOutAt ? 'กลับบ้าน' : r.checkInAt ? 'อยู่ศูนย์' : r.isAbsent ? 'ลา' : 'ยังไม่มา',
+                                        ]
+                                    })
+                                    exportPDF(`รายงานเช็กชื่อ — ${selectedDate}`, headers, rows, `checkin-${selectedDate}`, [
+                                        { label: 'วันที่', value: new Date(selectedDate).toLocaleDateString('th-TH') },
+                                        { label: 'มาเรียน', value: String(presentCount) },
+                                        { label: 'กลับบ้าน', value: String(checkedOutCount) },
+                                        { label: 'ยังไม่มา', value: String(absentCount) },
+                                    ])
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
+                                style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                            >
+                                <Download size={12} /> PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

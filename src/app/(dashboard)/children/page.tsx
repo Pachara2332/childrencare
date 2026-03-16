@@ -4,6 +4,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Skeleton } from '@/app/components/ui/Skeleton'
+import { Download } from 'lucide-react'
+import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ClassLevel {
@@ -236,15 +238,54 @@ export default function ChildrenPage() {
                         })}
                     </div>
 
-                    {/* Search */}
-                    <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--muted)' }}>🔍</span>
-                        <input
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="ค้นหาชื่อ ชื่อเล่น หรือรหัส..."
-                            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm input-field"
-                        />
+                    {/* Search + Export */}
+                    <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--muted)' }}>🔍</span>
+                            <input
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="ค้นหาชื่อ ชื่อเล่น หรือรหัส..."
+                                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm input-field"
+                            />
+                        </div>
+                        <button
+                            onClick={() => {
+                                const headers = ['รหัส', 'ชื่อเล่น', 'ชื่อ-สกุล', 'อายุ', 'ชั้น', 'ผู้ปกครอง', 'เบอร์โทร', 'โรคประจำตัว']
+                                const rows = filtered.map(e => [
+                                    e.child.code, e.child.nickname,
+                                    `${e.child.firstName} ${e.child.lastName}`,
+                                    calcAge(e.child.dateOfBirth).text,
+                                    e.level.name, e.child.parentName, e.child.parentPhone,
+                                    e.child.disease ?? '-',
+                                ])
+                                exportCSV(headers, rows, 'children-roster')
+                            }}
+                            className="px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1 shrink-0"
+                            style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                        >
+                            <Download size={12} /> CSV
+                        </button>
+                        <button
+                            onClick={() => {
+                                const headers = ['รหัส', 'ชื่อเล่น', 'ชื่อ-สกุล', 'อายุ', 'ชั้น', 'ผู้ปกครอง', 'เบอร์โทร', 'โรคประจำตัว']
+                                const rows = filtered.map(e => [
+                                    e.child.code, e.child.nickname,
+                                    `${e.child.firstName} ${e.child.lastName}`,
+                                    calcAge(e.child.dateOfBirth).text,
+                                    e.level.name, e.child.parentName, e.child.parentPhone,
+                                    e.child.disease ?? '-',
+                                ])
+                                exportPDF('ทะเบียนนักเรียน', headers, rows, 'children-roster', [
+                                    { label: 'ปีการศึกษา', value: activeYear?.name ?? '-' },
+                                    { label: 'จำนวน', value: `${filtered.length} คน` },
+                                ])
+                            }}
+                            className="px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1 shrink-0"
+                            style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                        >
+                            <Download size={12} /> PDF
+                        </button>
                     </div>
 
                     {/* Child grid */}

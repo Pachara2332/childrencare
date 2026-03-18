@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Skeleton } from '@/app/components/ui/Skeleton'
 import { Download, School, Search, Baby, Cake, User, Stethoscope, Loader2, CheckCircle2, PlusCircle, AlertCircle, Zap, Users, Copy, Sparkles, Eye, MapPin } from 'lucide-react'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -506,6 +507,8 @@ function ManageLevels({
     const [editId, setEditId] = useState<number | null>(null)
     const [editForm, setEditForm] = useState<Partial<ClassLevel>>({})
     const [deleting, setDeleting] = useState<number | null>(null)
+    const [confirmDeleteLevelId, setConfirmDeleteLevelId] = useState<number | null>(null)
+    const [confirmEditLevelId, setConfirmEditLevelId] = useState<number | null>(null)
 
     const COLORS = [
         { hex: '#F4A261', label: 'ส้ม' },
@@ -540,6 +543,7 @@ function ManageLevels({
     }
 
     const handleEdit = async (id: number) => {
+        setConfirmEditLevelId(null)
         await fetch(`/api/academic-years/${yearId}/levels/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -550,6 +554,7 @@ function ManageLevels({
     }
 
     const handleDelete = async (id: number) => {
+        setConfirmDeleteLevelId(null)
         setDeleting(id)
         const res = await fetch(`/api/academic-years/${yearId}/levels/${id}`, { method: 'DELETE' })
         if (!res.ok) {
@@ -650,7 +655,7 @@ function ManageLevels({
                                         </div>
                                         <div className="flex gap-2">
                                             <button
-                                                onClick={() => handleEdit(lv.id)}
+                                                onClick={() => setConfirmEditLevelId(lv.id)}
                                                 className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5"
                                                 style={{ background: 'var(--leaf)' }}
                                             >
@@ -695,7 +700,7 @@ function ManageLevels({
                                                 แก้ไข
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(lv.id)}
+                                                onClick={() => setConfirmDeleteLevelId(lv.id)}
                                                 disabled={deleting === lv.id}
                                                 className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
                                                 style={{ background: '#FFF0ED', color: 'var(--coral)' }}
@@ -860,6 +865,27 @@ function ManageLevels({
                     })}
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={confirmDeleteLevelId !== null}
+                onClose={() => setConfirmDeleteLevelId(null)}
+                onConfirm={() => confirmDeleteLevelId && handleDelete(confirmDeleteLevelId)}
+                title="ลบระดับชั้นนี้?"
+                description="เมื่อลบแล้วจะไม่สามารถกู้คืนได้ กรุณาตรวจสอบก่อนดำเนินการ"
+                confirmLabel="ลบระดับชั้น"
+                variant="danger"
+                loading={deleting !== null}
+            />
+
+            <ConfirmDialog
+                open={confirmEditLevelId !== null}
+                onClose={() => setConfirmEditLevelId(null)}
+                onConfirm={() => confirmEditLevelId && handleEdit(confirmEditLevelId)}
+                title="บันทึกการแก้ไข?"
+                description="ยืนยันการแก้ไขข้อมูลระดับชั้นนี้"
+                confirmLabel="บันทึก"
+                variant="warning"
+            />
         </div>
     )
 }

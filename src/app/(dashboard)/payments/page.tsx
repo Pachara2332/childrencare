@@ -6,6 +6,7 @@ import Modal from '@/app/components/ui/Modal'
 import { StatsCardsSkeleton, TableSkeleton } from '@/app/components/ui/Skeleton'
 import { CreditCard, Coins, CheckCircle, Banknote, Smartphone, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
 interface Payment {
     id: number; childId: number; month: number; year: number
@@ -35,6 +36,7 @@ export default function PaymentsPage() {
     const [showAdd, setShowAdd] = useState(false)
     const [showPay, setShowPay] = useState<Payment | null>(null)
     const [saving, setSaving] = useState(false)
+    const [showPayConfirm, setShowPayConfirm] = useState(false)
 
     const now = new Date()
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
@@ -78,6 +80,7 @@ export default function PaymentsPage() {
 
     const handleMarkPaid = async () => {
         if (!showPay) return
+        setShowPayConfirm(false)
         setSaving(true)
         const res = await fetch(`/api/payments/${showPay.id}/pay`, {
             method: 'POST',
@@ -317,13 +320,24 @@ export default function PaymentsPage() {
                         </div>
                         <div className="flex gap-3 mt-5">
                             <button onClick={() => setShowPay(null)} className="flex-1 py-2.5 rounded-xl text-sm btn-secondary">ยกเลิก</button>
-                            <button onClick={handleMarkPaid} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm btn-primary">
+                            <button onClick={() => setShowPayConfirm(true)} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm btn-primary">
                                 {saving ? '...' : 'ยืนยันชำระ'}
                             </button>
                         </div>
                     </>
                 )}
             </Modal>
+
+            <ConfirmDialog
+                open={showPayConfirm}
+                onClose={() => setShowPayConfirm(false)}
+                onConfirm={handleMarkPaid}
+                title="ยืนยันการชำระเงิน?"
+                description={showPay ? `บันทึกการชำระค่าธรรมเนียมของน้อง${showPay.child.nickname}` : ''}
+                confirmLabel="ยืนยันชำระ"
+                variant="success"
+                loading={saving}
+            />
         </div>
     )
 }

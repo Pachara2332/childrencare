@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { Skeleton } from '@/app/components/ui/Skeleton'
 import { Megaphone, Calendar, PlayCircle, AlertTriangle, Inbox, X } from 'lucide-react'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
 interface Announcement {
     id: number; title: string; content: string; type: string
@@ -27,6 +28,7 @@ export default function AnnouncementsPage() {
     const [form, setForm] = useState({ title: '', content: '', type: 'general', isUrgent: false, expiresAt: '' })
     const [saving, setSaving] = useState(false)
     const [deleting, setDeleting] = useState<number | null>(null)
+    const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
     const fetch_ = () => {
         fetch('/api/announcements').then(r => r.json()).then(d => { setItems(d); setLoading(false) })
@@ -45,8 +47,8 @@ export default function AnnouncementsPage() {
     }
 
     const handleDelete = async (id: number) => {
-        if (!confirm('ลบประกาศนี้?')) return
         setDeleting(id)
+        setConfirmDeleteId(null)
         await fetch(`/api/announcements/${id}`, { method: 'DELETE' })
         setItems(prev => prev.filter(a => a.id !== id))
         setDeleting(null)
@@ -143,7 +145,7 @@ export default function AnnouncementsPage() {
                                     </div>
 
                                     <button
-                                        onClick={() => handleDelete(a.id)}
+                                        onClick={() => setConfirmDeleteId(a.id)}
                                         disabled={deleting === a.id}
                                         className="text-xs px-2.5 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
                                         style={{ background: 'oklch(0.95 0.04 25)', color: 'var(--coral)', border: 'none', cursor: 'pointer' }}
@@ -194,6 +196,17 @@ export default function AnnouncementsPage() {
                     </button>
                 </div>
             </Modal>
+
+            <ConfirmDialog
+                open={confirmDeleteId !== null}
+                onClose={() => setConfirmDeleteId(null)}
+                onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+                title="ลบประกาศนี้?"
+                description="เมื่อลบแล้วจะไม่สามารถกู้คืนได้"
+                confirmLabel="ลบประกาศ"
+                variant="danger"
+                loading={deleting !== null}
+            />
         </div>
     )
 }

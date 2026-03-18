@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { PiggyBank, TrendingUp, TrendingDown, BookOpen, AlertCircle, ChevronDown, ChevronUp, Wallet, FileText, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
 type TabType = 'overview' | 'record' | 'payout' | 'history'
 
@@ -57,6 +58,9 @@ export default function SavingsPage() {
     const [payoutLoading, setPayoutLoading] = useState(false)
     const [payoutLevelId, setPayoutLevelId] = useState<number | ''>('')
     const [payoutChildId, setPayoutChildId] = useState<number | ''>('')
+    const [showPayoutConfirm, setShowPayoutConfirm] = useState(false)
+    const [showTransactionConfirm, setShowTransactionConfirm] = useState(false)
+    const [pendingTransactionEvent, setPendingTransactionEvent] = useState<React.FormEvent | null>(null)
 
     // For Tab 4: History
     const [history, setHistory] = useState<any[]>([])
@@ -117,8 +121,8 @@ export default function SavingsPage() {
         setLoading(false)
     }
 
-    const handleTransaction = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const handleTransaction = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault()
         if (!selectedChild || !transactionAmount || isNaN(Number(transactionAmount))) return
 
         setTransactionLoading(true)
@@ -153,11 +157,9 @@ export default function SavingsPage() {
         setTransactionLoading(false)
     }
 
-    const handlePayout = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const handlePayout = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault()
         if (!payoutLevelId && !payoutChildId) return
-        
-        if (!confirm('ยืนยันการทำรายการถอนเงินออมจบปี? รายการนี้จะถอนเงินคงเหลือทั้งหมดของเด็กที่เลือก และจะไม่สามารถรับฝากเพิ่มได้อีกในปีการศึกษานี้')) return
 
         setPayoutLoading(true)
         try {
@@ -512,7 +514,8 @@ export default function SavingsPage() {
 
                                     {/* Submit */}
                                     <button
-                                        type="submit"
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); setShowTransactionConfirm(true) }}
                                         disabled={transactionLoading || (transactionType === 'withdraw' && (Number(transactionAmount) > selectedChild.balance || selectedChild.balance === 0))}
                                         className="w-full py-3 rounded-xl font-bold flex justify-center items-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
                                         style={{ 
@@ -578,7 +581,8 @@ export default function SavingsPage() {
                         </div>
 
                         <button
-                            type="submit"
+                            type="button"
+                            onClick={() => setShowPayoutConfirm(true)}
                             disabled={payoutLoading || (!payoutLevelId && !payoutChildId)}
                             className="w-full py-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 shadow-md mt-6"
                             style={{ background: 'var(--rust)', color: 'white' }}
@@ -679,6 +683,27 @@ export default function SavingsPage() {
                     {toast.msg}
                 </div>
             )}
+            <ConfirmDialog
+                open={showTransactionConfirm}
+                onClose={() => setShowTransactionConfirm(false)}
+                onConfirm={() => { setShowTransactionConfirm(false); handleTransaction() }}
+                title={`ยืนยันการ${transactionType === 'deposit' ? 'ฝาก' : 'ถอน'}เงิน?`}
+                description={selectedChild ? `${transactionType === 'deposit' ? 'ฝาก' : 'ถอน'}เงิน ฿${Number(transactionAmount).toLocaleString()} ให้น้อง${selectedChild.nickname}` : ''}
+                confirmLabel={transactionType === 'deposit' ? 'ยืนยันฝากเงิน' : 'ยืนยันถอนเงิน'}
+                variant={transactionType === 'deposit' ? 'success' : 'warning'}
+                loading={transactionLoading}
+            />
+
+            <ConfirmDialog
+                open={showPayoutConfirm}
+                onClose={() => setShowPayoutConfirm(false)}
+                onConfirm={() => { setShowPayoutConfirm(false); handlePayout() }}
+                title="ยืนยันถอนเงินออมจบปี?"
+                description="ระบบจะทำการถอนเงินคงเหลือทั้งหมด และจะไม่สามารถฝากเพิ่มได้อีกในปีการศึกษานี้"
+                confirmLabel="ยืนยันถอนเงินจบปี"
+                variant="danger"
+                loading={payoutLoading}
+            />
         </div>
     )
 }

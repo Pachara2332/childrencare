@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import QRCode from 'qrcode'
 import { Skeleton } from '@/app/components/ui/Skeleton'
 import { ArrowLeft, User, Search, Baby, UserCircle, Cake, Droplets, HeartPulse, Stethoscope, AlertTriangle, Users, BookOpen, Activity, AlertCircle, Phone, Target, MapPin, QrCode, ClipboardList, CheckCircle2, History, XCircle, BarChart3, TrendingUp, Award, Smile, Scale, Download } from 'lucide-react'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
 interface Child {
     id: number
@@ -63,6 +64,7 @@ export default function ChildProfilePage() {
     const [editing, setEditing] = useState(false)
     const [editForm, setEditForm] = useState<Partial<Child>>({})
     const [saving, setSaving] = useState(false)
+    const [showSaveConfirm, setShowSaveConfirm] = useState(false)
 
     useEffect(() => {
         Promise.all([
@@ -89,6 +91,7 @@ export default function ChildProfilePage() {
     }, [tab, child])
 
     const handleSave = async () => {
+        setShowSaveConfirm(false)
         setSaving(true)
         const res = await fetch(`/api/children/${id}`, {
             method: 'PATCH',
@@ -279,7 +282,7 @@ export default function ChildProfilePage() {
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-sm flex items-center gap-1.5" style={{ color: 'var(--text)' }}><User size={18} /> ข้อมูลเด็ก</h3>
                             <button
-                                onClick={() => editing ? handleSave() : setEditing(true)}
+                                onClick={() => editing ? setShowSaveConfirm(true) : setEditing(true)}
                                 disabled={saving}
                                 className="text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5"
                                 style={{ background: editing ? 'var(--leaf)' : 'var(--cream)', color: editing ? 'white' : 'var(--leaf)', border: 'none', cursor: 'pointer' }}
@@ -613,6 +616,16 @@ export default function ChildProfilePage() {
                     </div>
                 </div>
             )}
+            <ConfirmDialog
+                open={showSaveConfirm}
+                onClose={() => setShowSaveConfirm(false)}
+                onConfirm={handleSave}
+                title="บันทึกข้อมูลเด็ก?"
+                description="ยืนยันการแก้ไขข้อมูลของเด็กคนนี้"
+                confirmLabel="บันทึก"
+                variant="success"
+                loading={saving}
+            />
         </div>
     )
 }

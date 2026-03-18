@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import QRCode from 'qrcode'
 import { Skeleton } from '@/app/components/ui/Skeleton'
+import { ArrowLeft, User, Search, Baby, UserCircle, Cake, Droplets, HeartPulse, Stethoscope, AlertTriangle, Users, BookOpen, Activity, AlertCircle, Phone, Target, MapPin, QrCode, ClipboardList, CheckCircle2, History, XCircle, BarChart3, TrendingUp, Award, Smile, Scale, Download } from 'lucide-react'
 
 interface Child {
     id: number
@@ -164,7 +165,7 @@ export default function ChildProfilePage() {
 
     if (!child) return (
         <div className="text-center py-20">
-            <p className="text-4xl mb-3">😕</p>
+            <UserCircle size={48} className="mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
             <p style={{ color: 'var(--muted)' }}>ไม่พบข้อมูลเด็ก</p>
         </div>
     )
@@ -181,7 +182,7 @@ export default function ChildProfilePage() {
                 className="flex items-center gap-2 text-sm font-semibold"
                 style={{ color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
             >
-                ← กลับรายชื่อ
+                <ArrowLeft size={16} /> กลับรายชื่อ
             </button>
 
             {/* Hero card */}
@@ -211,32 +212,32 @@ export default function ChildProfilePage() {
                             {child.code}
                         </span>
                         <span
-                            className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                            className="text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
                             style={{
                                 background: child.gender === 'male' ? '#DBE9F4' : '#FDE8F0',
                                 color: child.gender === 'male' ? 'var(--sky)' : '#C2185B',
                             }}
                         >
-                            {child.gender === 'male' ? '👦 ชาย' : '👧 หญิง'}
+                            <Baby size={14} /> {child.gender === 'male' ? 'ชาย' : 'หญิง'}
                         </span>
                     </div>
                     <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
                         {child.firstName} {child.lastName}
                     </p>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text)' }}>
-                        🎂 {calcAge(child.dateOfBirth)}
+                    <p className="text-sm mt-1 flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                        <Cake size={16} style={{ color: 'var(--sun)' }}/> อายุ {calcAge(child.dateOfBirth)}
                     </p>
                 </div>
 
                 {/* Quick stats */}
                 <div className="hidden md:flex gap-4 shrink-0">
                     {[
-                        { label: 'น้ำหนัก', value: latestDev?.weight ? `${latestDev.weight} กก.` : '—', icon: '⚖️' },
-                        { label: 'ส่วนสูง', value: latestDev?.height ? `${latestDev.height} ซม.` : '—', icon: '📏' },
-                        { label: 'เข้าเรียน', value: `${attendanceRate()}%`, icon: '📊' },
+                        { label: 'น้ำหนัก', value: latestDev?.weight ? `${latestDev.weight} กก.` : '—', icon: <Scale size={24} style={{ color: 'var(--leaf)' }} /> },
+                        { label: 'ส่วนสูง', value: latestDev?.height ? `${latestDev.height} ซม.` : '—', icon: <Droplets size={24} style={{ color: 'var(--sky)' }} /> },
+                        { label: 'เข้าเรียน', value: `${attendanceRate()}%`, icon: <BarChart3 size={24} style={{ color: 'var(--sun)' }} /> },
                     ].map(s => (
-                        <div key={s.label} className="text-center px-4 py-2 rounded-xl" style={{ background: 'var(--cream)' }}>
-                            <p className="text-lg">{s.icon}</p>
+                        <div key={s.label} className="text-center px-4 py-2 rounded-xl flex flex-col items-center gap-1" style={{ background: 'var(--cream)' }}>
+                            <div className="mb-0.5">{s.icon}</div>
                             <p className="text-base font-bold" style={{ color: 'var(--text)' }}>{s.value}</p>
                             <p className="text-xs" style={{ color: 'var(--muted)' }}>{s.label}</p>
                         </div>
@@ -247,15 +248,15 @@ export default function ChildProfilePage() {
             {/* Tabs */}
             <div className="flex gap-2 flex-wrap">
                 {([
-                    ['info', '📋 ข้อมูล'],
-                    ['checkin', '✅ การเข้าเรียน'],
-                    ['development', '📈 พัฒนาการ'],
-                    ['qr', '📱 QR Code'],
-                ] as [Tab, string][]).map(([t, label]) => (
+                    ['info', 'ข้อมูล', <User size={16} />],
+                    ['checkin', 'การเข้าเรียน', <History size={16} />],
+                    ['development', 'พัฒนาการ', <Activity size={16} />],
+                    ['qr', 'QR Code', <QrCode size={16} />],
+                ] as [Tab, string, React.ReactNode][]).map(([t, label, icon]) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5"
                         style={{
                             background: tab === t ? 'var(--leaf)' : 'white',
                             color: tab === t ? 'white' : 'var(--muted)',
@@ -276,14 +277,14 @@ export default function ChildProfilePage() {
                         style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>👶 ข้อมูลเด็ก</h3>
+                            <h3 className="font-semibold text-sm flex items-center gap-1.5" style={{ color: 'var(--text)' }}><User size={18} /> ข้อมูลเด็ก</h3>
                             <button
                                 onClick={() => editing ? handleSave() : setEditing(true)}
                                 disabled={saving}
-                                className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+                                className="text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5"
                                 style={{ background: editing ? 'var(--leaf)' : 'var(--cream)', color: editing ? 'white' : 'var(--leaf)', border: 'none', cursor: 'pointer' }}
                             >
-                                {saving ? '⏳' : editing ? '✅ บันทึก' : '✏️ แก้ไข'}
+                                {saving ? 'รอสักครู่...' : editing ? <><CheckCircle2 size={14} /> บันทึก</> : 'แก้ไข'}
                             </button>
                         </div>
 
@@ -353,7 +354,7 @@ export default function ChildProfilePage() {
                         className="rounded-2xl p-5"
                         style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
                     >
-                        <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text)' }}>👨‍👩‍👧 ข้อมูลผู้ปกครอง</h3>
+                        <h3 className="font-semibold text-sm mb-4 flex items-center gap-1.5" style={{ color: 'var(--text)' }}><Users size={18} /> ข้อมูลผู้ปกครอง</h3>
                         {[
                             ['ชื่อผู้ปกครอง', child.parentName],
                             ['ความสัมพันธ์', child.parentRelation === 'mother' ? 'แม่' : child.parentRelation === 'father' ? 'พ่อ' : 'ผู้ปกครอง'],
@@ -412,7 +413,7 @@ export default function ChildProfilePage() {
 
                     {checkIns.length === 0 ? (
                         <div className="py-12 text-center">
-                            <p className="text-3xl mb-2">📋</p>
+                            <History size={48} className="mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
                             <p className="text-sm" style={{ color: 'var(--muted)' }}>ยังไม่มีประวัติ</p>
                         </div>
                     ) : (
@@ -432,9 +433,9 @@ export default function ChildProfilePage() {
                                             {new Date(ci.date).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                                         </p>
                                         {ci.checkInAt && (
-                                            <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                                                🟢 เข้า {new Date(ci.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                                                {ci.checkOutAt && ` · 🔴 ออก ${new Date(ci.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`}
+                                            <p className="text-xs flex flex-wrap items-center gap-1 mt-0.5" style={{ color: 'var(--muted)' }}>
+                                                <span className="flex items-center gap-0.5"><CheckCircle2 size={12} style={{ color: 'var(--leaf)' }} /> เข้า {new Date(ci.checkInAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                {ci.checkOutAt && <span className="flex items-center gap-0.5 whitespace-nowrap"> · <XCircle size={12} style={{ color: 'var(--coral)' }} /> ออก {new Date(ci.checkOutAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>}
                                                 {!ci.checkOutAt && <span style={{ color: 'var(--sage)' }}> · ยังอยู่ศูนย์</span>}
                                             </p>
                                         )}
@@ -449,8 +450,8 @@ export default function ChildProfilePage() {
                                         >
                                             {ci.checkInAt ? 'มา' : 'ขาด'}
                                         </span>
-                                        <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                                            {ci.method === 'qr' ? '📱' : '✏️'}
+                                        <span className="text-xs flex items-center justify-center p-1 rounded bg-slate-50 border border-slate-100" style={{ color: 'var(--muted)' }}>
+                                            {ci.method === 'qr' ? <QrCode size={14} /> : <ClipboardList size={14} />}
                                         </span>
                                     </div>
                                 </div>
@@ -499,7 +500,7 @@ export default function ChildProfilePage() {
                             className="rounded-2xl p-5"
                             style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
                         >
-                            <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text)' }}>📈 กราฟน้ำหนัก</h3>
+                            <h3 className="font-semibold text-sm mb-4 flex items-center gap-1.5" style={{ color: 'var(--text)' }}><TrendingUp size={18} /> กราฟน้ำหนัก</h3>
                             <div className="flex items-end gap-2 h-28">
                                 {[...developments].reverse().slice(0, 8).map((d, i, arr) => {
                                     const weights = arr.map(x => x.weight ?? 0).filter(Boolean)
@@ -531,17 +532,17 @@ export default function ChildProfilePage() {
                             className="rounded-2xl p-5"
                             style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
                         >
-                            <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text)' }}>🌟 พัฒนาการ 5 ด้าน</h3>
+                            <h3 className="font-semibold text-sm mb-4 flex items-center gap-1.5" style={{ color: 'var(--text)' }}><Award size={18} /> พัฒนาการ 5 ด้าน</h3>
                             {[
-                                ['🗣️ ด้านภาษา', latestDev.scoreLanguage, 'var(--leaf)'],
-                                ['🏃 ด้านร่างกาย', latestDev.scorePhysical, 'var(--sage)'],
-                                ['🧠 ด้านสติปัญญา', latestDev.scoreIntellect, 'var(--sky)'],
-                                ['❤️ ด้านอารมณ์', latestDev.scoreEmotional, 'var(--coral)'],
-                                ['👥 ด้านสังคม', latestDev.scoreSocial, 'var(--sun)'],
-                            ].map(([label, score, color]) => (
+                                ['ด้านภาษา', latestDev.scoreLanguage, 'var(--leaf)', <BookOpen size={16} />],
+                                ['ด้านร่างกาย', latestDev.scorePhysical, 'var(--sage)', <Activity size={16} />],
+                                ['ด้านสติปัญญา', latestDev.scoreIntellect, 'var(--sky)', <Target size={16} />],
+                                ['ด้านอารมณ์', latestDev.scoreEmotional, 'var(--coral)', <HeartPulse size={16} />],
+                                ['ด้านสังคม', latestDev.scoreSocial, 'var(--sun)', <Users size={16} />],
+                            ].map(([label, score, color, icon]) => (
                                 <div key={label as string} className="mb-4">
                                     <div className="flex justify-between mb-1">
-                                        <span className="text-sm" style={{ color: 'var(--text)' }}>{label as string}</span>
+                                        <span className="text-sm flex items-center gap-1.5" style={{ color: 'var(--text)' }}>{icon as React.ReactNode} {label as string}</span>
                                         <span className="text-sm font-bold" style={{ color: color as string }}>
                                             {score ?? '—'}{score ? '/100' : ''}
                                         </span>
@@ -559,7 +560,7 @@ export default function ChildProfilePage() {
 
                     {developments.length === 0 && (
                         <div className="text-center py-12 rounded-2xl" style={{ background: 'white', border: '1px solid var(--warm)' }}>
-                            <p className="text-4xl mb-2">📈</p>
+                            <TrendingUp size={48} className="mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
                             <p className="text-sm" style={{ color: 'var(--muted)' }}>ยังไม่มีข้อมูลพัฒนาการ</p>
                             <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>ไปที่เมนู "พัฒนาการ" เพื่อบันทึก</p>
                         </div>
@@ -598,10 +599,10 @@ export default function ChildProfilePage() {
                                         a.download = `qr-${child.code}-${child.nickname}.png`
                                         a.click()
                                     }}
-                                    className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold"
+                                    className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-1.5"
                                     style={{ background: 'var(--leaf)' }}
                                 >
-                                    ⬇️ ดาวน์โหลด QR
+                                    <Download size={16} /> ดาวน์โหลด QR
                                 </button>
                             </>
                         ) : (

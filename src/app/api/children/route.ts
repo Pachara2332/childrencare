@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
 function generateCode(seq: number): string {
   return `KD${String(seq).padStart(3, '0')}`
 }

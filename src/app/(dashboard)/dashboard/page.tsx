@@ -1,6 +1,6 @@
 // app/(dashboard)/dashboard/page.tsx
 import { prisma } from '@/lib/prisma'
-import { School, ClipboardList, Inbox, Megaphone, Calendar, PlayCircle, AlertTriangle, UserCheck } from 'lucide-react'
+import { School, ClipboardList, Inbox, Megaphone, Calendar, PlayCircle, AlertTriangle, UserCheck, UserX, PiggyBank } from 'lucide-react'
 import DashboardClient from './DashboardClient'
 import DashboardBadge from './DashboardBadge'
 
@@ -121,7 +121,8 @@ export default async function DashboardPage() {
                         <p className="text-xs mb-1" style={{ color: 'var(--mint)' }}>
                             {data.activeYear.name}
                         </p>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-2xl font-bold text-white flex items-center gap-2 mt-1">
+                            <UserCheck size={28} className="opacity-80" />
                             {data.presentToday}
                             <span className="text-sm font-normal ml-1" style={{ color: 'oklch(1 0 0 / 0.5)' }}>
                                 / {data.totalChildren} คน มาเรียนวันนี้
@@ -131,12 +132,12 @@ export default async function DashboardPage() {
                     <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-2 sm:mt-0">
                         <DashboardBadge />
                         {[
-                            { label: 'ขาดเรียน', value: data.absentToday, color: 'oklch(0.8 0.1 25)' },
-                            { label: 'เงินออมรวม', value: `฿${data.totalSavings.toLocaleString('th-TH')}`, color: 'oklch(0.8 0.1 70)' },
-                        ].map(s => (
-                            <div key={s.label} className="text-right">
+                            { label: 'ขาดเรียน', value: data.absentToday, color: 'oklch(0.8 0.1 25)', icon: <UserX size={14} className="inline mr-1" /> },
+                            { label: 'เงินออมรวม', value: `฿${data.totalSavings.toLocaleString('th-TH')}`, color: 'oklch(0.8 0.1 70)', icon: <PiggyBank size={14} className="inline mr-1" /> },
+                        ].map((s, i) => (
+                            <div key={i} className="text-right">
                                 <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>
-                                <p className="text-xs" style={{ color: 'oklch(1 0 0 / 0.4)' }}>{s.label}</p>
+                                <p className="text-xs flex items-center justify-end gap-1" style={{ color: 'oklch(1 0 0 / 0.4)' }}>{s.icon} {s.label}</p>
                             </div>
                         ))}
                     </div>

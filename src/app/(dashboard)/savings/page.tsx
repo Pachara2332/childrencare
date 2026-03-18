@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { PiggyBank, TrendingUp, TrendingDown, BookOpen, AlertCircle, ChevronDown, ChevronUp, Wallet, FileText, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
@@ -210,11 +210,11 @@ export default function SavingsPage() {
         }
     }, [historyChildId])
 
-    const filteredChildren = childrenList.filter(c => 
+    const filteredChildren = useMemo(() => childrenList.filter(c => 
         c.nickname.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
         c.firstName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         c.lastName.toLowerCase().includes(debouncedSearch.toLowerCase())
-    )
+    ), [childrenList, debouncedSearch])
 
     const tabs: { id: TabType, label: string }[] = [
         { id: 'overview', label: 'ภาพรวม' },

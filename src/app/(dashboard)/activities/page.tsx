@@ -1,7 +1,7 @@
 // app/(dashboard)/activities/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { CardGridSkeleton } from '@/app/components/ui/Skeleton'
 import { Smile, Meh, Frown, Thermometer, Utensils, Moon, FileText, Camera, Download } from 'lucide-react'
@@ -84,7 +84,7 @@ export default function ActivitiesPage() {
         setSaving(false)
     }
 
-    const getActivity = (childId: number) => activities.find(a => a.childId === childId)
+    const getActivity = useCallback((childId: number) => activities.find(a => a.childId === childId), [activities])
 
     return (
         <div className="space-y-4 animate-fade-up">

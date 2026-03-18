@@ -1,7 +1,7 @@
 // app/(dashboard)/checkin/page.tsx
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import QRCode from 'qrcode'
 import { StatsSkeleton, TableSkeleton } from '@/app/components/ui/Skeleton'
 import PickupDialog from '@/app/components/ui/PickupDialog'
@@ -204,29 +204,29 @@ export default function CheckInPage() {
         setAbsentChild(null)
     }
 
-    const getChildLevel = (childId: number) => enrollments.find(e => e.childId === childId)?.level ?? null
-    const filteredRecords = records.filter(r => selectedLevelId === 'all' || getChildLevel(r.childId)?.id === selectedLevelId)
-    const getRecord = (childId: number) => records.find(r => r.childId === childId)
+    const getChildLevel = useCallback((childId: number) => enrollments.find(e => e.childId === childId)?.level ?? null, [enrollments])
+    const filteredRecords = useMemo(() => records.filter(r => selectedLevelId === 'all' || getChildLevel(r.childId)?.id === selectedLevelId), [records, selectedLevelId, getChildLevel])
+    const getRecord = useCallback((childId: number) => records.find(r => r.childId === childId), [records])
 
     // Sort: ยังไม่มา → อยู่ในศูนย์ → กลับบ้านแล้ว (ลาไปอยู่ท้ายสุด)
-    const getStatusOrder = (childId: number) => {
+    const getStatusOrder = useCallback((childId: number) => {
         const rec = getRecord(childId)
         if (rec?.isAbsent) return 3    // ลา
         if (!rec?.checkInAt) return 0 // ยังไม่มา
         if (!rec.checkOutAt) return 1  // อยู่ในศูนย์
         return 2                        // กลับบ้านแล้ว
-    }
+    }, [getRecord])
 
-    const filteredChildren = children.filter(c => {
+    const filteredChildren = useMemo(() => children.filter(c => {
         const matchSearch = `${c.nickname}${c.firstName}${c.lastName}${c.code}`.toLowerCase().includes(debouncedSearch.toLowerCase())
         if (!matchSearch) return false
         return selectedLevelId === 'all' || getChildLevel(c.id)?.id === selectedLevelId
-    }).sort((a, b) => getStatusOrder(a.id) - getStatusOrder(b.id))
+    }).sort((a, b) => getStatusOrder(a.id) - getStatusOrder(b.id)), [children, debouncedSearch, selectedLevelId, getChildLevel, getStatusOrder])
 
-    const scopedChildren = selectedLevelId === 'all' ? children : children.filter(c => getChildLevel(c.id)?.id === selectedLevelId)
-    const presentCount = filteredRecords.filter(r => r.checkInAt && !r.checkOutAt).length
-    const checkedOutCount = filteredRecords.filter(r => r.checkOutAt).length
-    const absentCount = scopedChildren.length - filteredRecords.filter(r => r.checkInAt).length
+    const scopedChildren = useMemo(() => selectedLevelId === 'all' ? children : children.filter(c => getChildLevel(c.id)?.id === selectedLevelId), [children, selectedLevelId, getChildLevel])
+    const presentCount = useMemo(() => filteredRecords.filter(r => r.checkInAt && !r.checkOutAt).length, [filteredRecords])
+    const checkedOutCount = useMemo(() => filteredRecords.filter(r => r.checkOutAt).length, [filteredRecords])
+    const absentCount = useMemo(() => scopedChildren.length - filteredRecords.filter(r => r.checkInAt).length, [scopedChildren, filteredRecords])
 
     const tabs = [
         { id: 'today' as const, label: 'สรุปวันนี้' },

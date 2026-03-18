@@ -1,10 +1,10 @@
 // app/(dashboard)/children/page.tsx
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Skeleton } from '@/app/components/ui/Skeleton'
-import { Download } from 'lucide-react'
+import { Download, School, Search, Baby, Cake, User, Stethoscope, Loader2, CheckCircle2, PlusCircle, AlertCircle, Zap, Users, Copy, Sparkles, Eye, MapPin } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -110,16 +110,16 @@ export default function ChildrenPage() {
     const activeYear = years.find(y => y.id === selectedYearId)
     const levels = activeYear?.classLevels ?? []
 
-    const filtered = enrollments.filter(e =>
+    const filtered = useMemo(() => enrollments.filter(e =>
         `${e.child.nickname}${e.child.firstName}${e.child.lastName}${e.child.code}`
             .toLowerCase().includes(search.toLowerCase())
-    )
+    ), [enrollments, search])
 
     // Count per level
-    const levelCounts = levels.map(l => ({
+    const levelCounts = useMemo(() => levels.map(l => ({
         ...l,
         count: enrollments.filter(e => e.level.id === l.id).length,
-    }))
+    })), [levels, enrollments])
 
     return (
         <div className="space-y-4 animate-fade-up">
@@ -177,7 +177,7 @@ export default function ChildrenPage() {
                                 boxShadow: selectedLevelId === 'all' ? '0 4px 16px rgba(28,61,46,0.25)' : '0 2px 8px rgba(0,0,0,0.04)',
                             }}
                         >
-                            <div className="text-2xl mb-1">🏫</div>
+                            <div className="mb-2"><School size={28} style={{ color: selectedLevelId === 'all' ? 'white' : 'var(--text)', opacity: selectedLevelId === 'all' ? 1 : 0.7 }} /></div>
                             <div
                                 className="text-2xl font-bold"
                                 style={{ color: selectedLevelId === 'all' ? 'white' : 'var(--text)' }}
@@ -241,7 +241,7 @@ export default function ChildrenPage() {
                     {/* Search + Export */}
                     <div className="flex items-center gap-2">
                         <div className="relative flex-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--muted)' }}>🔍</span>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={16} style={{ color: 'var(--muted)' }} />
                             <input
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
@@ -381,7 +381,7 @@ function ChildGrid({
             className="py-16 text-center rounded-2xl"
             style={{ background: 'white', border: '1px solid var(--warm)' }}
         >
-            <p className="text-5xl mb-3">👶</p>
+            <Baby size={56} className="mx-auto mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
             <p className="font-semibold" style={{ color: 'var(--text)' }}>ไม่พบรายชื่อเด็ก</p>
             <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>ลองเปลี่ยนระดับชั้น หรือเพิ่มเด็กใหม่</p>
         </div>
@@ -443,13 +443,15 @@ function ChildGrid({
                                         {e.child.code}
                                     </span>
                                 </div>
-                                <p className="text-xs" style={{ color: 'var(--muted)' }}>🎂 {ageText}</p>
-                                <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
-                                    👤 {e.child.parentName} · {e.child.parentPhone}
+                                <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--muted)' }}>
+                                    <Cake size={14} /> {ageText}
+                                </p>
+                                <p className="text-xs truncate flex items-center gap-1.5" style={{ color: 'var(--muted)' }}>
+                                    <User size={14} /> <span>{e.child.parentName} · {e.child.parentPhone}</span>
                                 </p>
                                 {e.child.disease && (
-                                    <p className="text-xs font-semibold" style={{ color: 'var(--coral)' }}>
-                                        🏥 {e.child.disease}
+                                    <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--coral)' }}>
+                                        <Stethoscope size={14} /> {e.child.disease}
                                     </p>
                                 )}
                             </div>
@@ -476,7 +478,7 @@ function ChildGrid({
                                         className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-30"
                                         style={{ background: 'var(--leaf)' }}
                                     >
-                                        {movingId === e.child.id ? '⏳' : 'ย้าย'}
+                                        {movingId === e.child.id ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'ย้าย'}
                                     </button>
                                 </div>
                             )}
@@ -579,7 +581,7 @@ function ManageLevels({
 
                 {levels.length === 0 ? (
                     <div className="py-10 text-center">
-                        <p className="text-3xl mb-2">🏫</p>
+                        <School size={48} className="mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
                         <p className="text-sm" style={{ color: 'var(--muted)' }}>ยังไม่มีระดับชั้น</p>
                     </div>
                 ) : (
@@ -649,10 +651,10 @@ function ManageLevels({
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleEdit(lv.id)}
-                                                className="px-4 py-2 rounded-xl text-xs font-semibold text-white"
+                                                className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5"
                                                 style={{ background: 'var(--leaf)' }}
                                             >
-                                                ✅ บันทึก
+                                                <CheckCircle2 size={16} /> บันทึก
                                             </button>
                                             <button
                                                 onClick={() => { setEditId(null); setEditForm({}) }}
@@ -698,7 +700,7 @@ function ManageLevels({
                                                 className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
                                                 style={{ background: '#FFF0ED', color: 'var(--coral)' }}
                                             >
-                                                {deleting === lv.id ? '⏳' : 'ลบ'}
+                                                {deleting === lv.id ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'ลบ'}
                                             </button>
                                         </div>
                                     </div>
@@ -714,11 +716,13 @@ function ManageLevels({
                 className="rounded-2xl p-5"
                 style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
             >
-                <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text)' }}>➕ เพิ่มระดับชั้นใหม่</h3>
+                <h3 className="font-semibold text-sm mb-4 flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                    <PlusCircle size={18} /> เพิ่มระดับชั้นใหม่
+                </h3>
 
                 {error && (
-                    <div className="mb-3 px-4 py-2.5 rounded-xl text-sm" style={{ background: '#FFF0ED', color: 'var(--coral)' }}>
-                        ⚠️ {error}
+                    <div className="mb-3 px-4 py-2.5 rounded-xl text-sm flex items-center gap-2" style={{ background: '#FFF0ED', color: 'var(--coral)' }}>
+                        <AlertCircle size={16} /> {error}
                     </div>
                 )}
 
@@ -802,10 +806,10 @@ function ManageLevels({
                 <button
                     onClick={handleAdd}
                     disabled={saving}
-                    className="mt-4 w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-40"
+                    className="mt-4 w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
                     style={{ background: 'var(--leaf)' }}
                 >
-                    {saving ? '⏳ กำลังบันทึก...' : '✅ เพิ่มระดับชั้น'}
+                    {saving ? <><Loader2 size={16} className="animate-spin" /> กำลังบันทึก...</> : <><PlusCircle size={16} /> เพิ่มระดับชั้น</>}
                 </button>
             </div>
 
@@ -814,8 +818,8 @@ function ManageLevels({
                 className="rounded-2xl p-5"
                 style={{ background: 'var(--cream)', border: '1px solid var(--warm)' }}
             >
-                <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--text)' }}>
-                    ⚡ เพิ่มระดับชั้นมาตรฐานด่วน
+                <h3 className="font-semibold text-sm mb-3 flex items-center gap-1.5" style={{ color: 'var(--text)' }}>
+                    <Zap size={18} style={{ color: 'var(--sun)' }} /> เพิ่มระดับชั้นมาตรฐานด่วน
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                     {[
@@ -850,7 +854,7 @@ function ManageLevels({
                             >
                                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: preset.color }} />
                                 <span>{preset.name}</span>
-                                {exists && <span className="ml-auto text-xs" style={{ color: 'var(--sage)' }}>✓ มีแล้ว</span>}
+                                {exists && <span className="ml-auto text-xs flex items-center gap-1" style={{ color: 'var(--sage)' }}><CheckCircle2 size={14} /> มีแล้ว</span>}
                             </button>
                         )
                     })}
@@ -930,11 +934,11 @@ function AddChildForm({
             className="rounded-2xl p-6 max-w-2xl"
             style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
         >
-            <h2 className="font-bold text-base mb-5" style={{ color: 'var(--text)' }}>👶 เพิ่มข้อมูลเด็กใหม่</h2>
+            <h2 className="font-bold text-base mb-5 flex items-center gap-1.5" style={{ color: 'var(--text)' }}><Baby size={20} /> เพิ่มข้อมูลเด็กใหม่</h2>
 
             {error && (
-                <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: '#FFF0ED', color: 'var(--coral)' }}>
-                    ⚠️ {error}
+                <div className="mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2" style={{ background: '#FFF0ED', color: 'var(--coral)' }}>
+                    <AlertCircle size={16} /> {error}
                 </div>
             )}
 
@@ -987,8 +991,8 @@ function AddChildForm({
                     {label('วันเกิด', true)}
                     <input type="date" value={form.dateOfBirth} onChange={set('dateOfBirth')} className={inputClass} style={inputStyle} />
                     {form.dateOfBirth && (
-                        <p className="text-xs mt-1" style={{ color: 'var(--sage)' }}>
-                            🎂 อายุ {calcAge(form.dateOfBirth).text}
+                        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--sage)' }}>
+                            <Cake size={12} /> อายุ {calcAge(form.dateOfBirth).text}
                         </p>
                     )}
                 </div>
@@ -1003,7 +1007,7 @@ function AddChildForm({
                 <div>{label('ภูมิแพ้/แพ้ยา')}<input value={form.allergy} onChange={set('allergy')} placeholder="ถ้าไม่มีเว้นว่าง" className={inputClass} style={inputStyle} /></div>
 
                 <div className="col-span-2 pt-2" style={{ borderTop: '1px solid var(--warm)' }}>
-                    <p className="text-sm font-bold mb-3 mt-2" style={{ color: 'var(--text)' }}>👨‍👩‍👧 ข้อมูลผู้ปกครอง</p>
+                    <p className="text-sm font-bold mb-3 mt-2 flex items-center gap-1.5" style={{ color: 'var(--text)' }}><Users size={16} /> ข้อมูลผู้ปกครอง</p>
                 </div>
 
                 <div>{label('ชื่อผู้ปกครอง', true)}<input value={form.parentName} onChange={set('parentName')} placeholder="ชื่อ-นามสกุล" className={inputClass} style={inputStyle} /></div>
@@ -1026,10 +1030,10 @@ function AddChildForm({
             <button
                 onClick={handleSubmit}
                 disabled={saving || !form.levelId}
-                className="mt-5 w-full py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-50"
+                className="mt-5 w-full py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: 'var(--leaf)' }}
             >
-                {saving ? '⏳ กำลังบันทึก...' : '✅ บันทึกข้อมูล'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> กำลังบันทึก...</> : <><CheckCircle2 size={16} /> บันทึกข้อมูล</>}
             </button>
         </div>
     )
@@ -1125,7 +1129,7 @@ function ImportJSON({
             className="rounded-2xl p-6 max-w-3xl"
             style={{ background: 'white', border: '1px solid var(--warm)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
         >
-            <h2 className="font-bold text-base mb-1" style={{ color: 'var(--text)' }}>📥 นำเข้าข้อมูลเด็กจาก JSON</h2>
+            <h2 className="font-bold text-base mb-1 flex items-center gap-1.5" style={{ color: 'var(--text)' }}><Download size={20} /> นำเข้าข้อมูลเด็กจาก JSON</h2>
             <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>วางข้อมูล JSON แล้วเลือกระดับชั้นที่ต้องการเพิ่ม</p>
 
             {/* Level selector */}
@@ -1175,10 +1179,10 @@ function ImportJSON({
                             setJson(example)
                             validate(example)
                         }}
-                        className="mt-2 px-3 py-1.5 rounded-lg text-white font-semibold"
+                        className="mt-2 px-3 py-1.5 rounded-lg text-white font-semibold flex items-center justify-center gap-1.5"
                         style={{ background: 'var(--leaf)' }}
                     >
-                        📋 คัดลอกตัวอย่างไปใช้
+                        <Copy size={16} /> คัดลอกตัวอย่างไปใช้
                     </button>
                 </div>
             </details>
@@ -1196,13 +1200,13 @@ function ImportJSON({
                 style={{ border: '1px solid var(--warm)', background: 'var(--cream)', color: 'var(--text)', resize: 'vertical' }}
             />
 
-            {error && <p className="mt-1 text-xs" style={{ color: 'var(--coral)' }}>⚠️ {error}</p>}
+            {error && <p className="mt-1 text-xs flex items-center gap-1" style={{ color: 'var(--coral)' }}><AlertCircle size={14} /> {error}</p>}
 
             {preview && (
                 <div className="mt-3 p-3 rounded-xl" style={{ background: '#E8F5EE' }}>
                     <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--leaf)' }}>
-                        ✨ พร้อมนำเข้า {preview.length} รายการ
-                        {!selectedLevelId && <span className="text-rose-500 font-normal">(กรุณาเลือกระดับชั้นด้านบน)</span>}
+                        <Sparkles size={16} /> พร้อมนำเข้า {preview.length} รายการ
+                        {!selectedLevelId && <span className="text-rose-500 font-normal ml-1">(กรุณาเลือกระดับชั้นด้านบน)</span>}
                     </p>
                     <div className="mt-1 space-y-0.5">
                         {preview.slice(0, 3).map((item, i) => {
@@ -1216,7 +1220,7 @@ function ImportJSON({
 
             {result && (
                 <div className="mt-3 p-3 rounded-xl text-xs" style={{ background: result.errors.length === 0 ? '#D8F3DC' : '#FFF8E8' }}>
-                    <p className="font-bold">✅ นำเข้าสำเร็จ {result.imported} คน</p>
+                    <p className="font-bold flex items-center gap-1"><CheckCircle2 size={16} /> นำเข้าสำเร็จ {result.imported} คน</p>
                     {result.errors.length > 0 && (
                         <div className="mt-1 text-rose-500 max-h-24 overflow-y-auto">
                             {result.errors.map((e, i) => <p key={i}>• {e}</p>)}
@@ -1228,23 +1232,23 @@ function ImportJSON({
             <div className="flex gap-3 mt-4">
                 <button
                     onClick={() => validate()}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5"
                     style={{ background: 'white', color: 'var(--text)', border: '1px solid var(--warm)' }}
                 >
-                    👁️ ตรวจสอบ JSON
+                    <Eye size={16} /> ตรวจสอบ JSON
                 </button>
                 <button
                     onClick={handleImport}
                     disabled={isButtonDisabled}
-                    className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm transition-all ${isButtonDisabled ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:brightness-110 active:scale-[0.98]'}`}
+                    className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 ${isButtonDisabled ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:brightness-110 active:scale-[0.98]'}`}
                     style={{ background: 'var(--leaf)' }}
                 >
-                    {saving ? '⏳ กำลังนำเข้า...' : '📥 เริ่มนำเข้าข้อมูล'}
+                    {saving ? <><Loader2 size={16} className="animate-spin" /> กำลังนำเข้า...</> : <><Download size={16} /> เริ่มนำเข้าข้อมูล</>}
                 </button>
             </div>
             {isButtonDisabled && json.trim() && (
                 <div className="mt-3 p-2.5 rounded-xl text-center text-[11px] bg-amber-50 border border-amber-200" style={{ color: 'var(--sun)' }}>
-                    {!preview ? "⚠️ กรุณาตรวจสอบรูปแบบ JSON ให้ถูกต้อง" : !selectedLevelId ? "📍 กรุณาคลิกเลือกระดับชั้นที่ต้องการนำเข้าข้อมูล" : ""}
+                    {!preview ? <span className="flex items-center justify-center gap-1"><AlertCircle size={14} /> กรุณาตรวจสอบรูปแบบ JSON ให้ถูกต้อง</span> : !selectedLevelId ? <span className="flex items-center justify-center gap-1"><MapPin size={14} /> กรุณาคลิกเลือกระดับชั้นที่ต้องการนำเข้าข้อมูล</span> : ""}
                 </div>
             )}
         </div>

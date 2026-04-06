@@ -14,7 +14,7 @@ async function getDashboardData() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const [totalChildren, presentToday, announcements, recentActivities, totalSavings] =
+    const [totalChildren, presentToday, announcements, totalSavings, children, checkInsTodayArray] =
         await Promise.all([
             prisma.childEnrollment.count({
                 where: { academicYearId: activeYear.id, status: 'active' },
@@ -34,38 +34,62 @@ async function getDashboardData() {
                 orderBy: [{ isUrgent: 'desc' }, { publishedAt: 'desc' }],
                 take: 5,
             }),
-            prisma.dailyActivity.findMany({
-                where: { date: today, academicYearId: activeYear.id },
-                include: { child: true },
-                take: 5,
-            }),
             prisma.saving.aggregate({
                 where: { academicYearId: activeYear.id },
                 _sum: { amount: true },
             }),
+            prisma.childEnrollment.findMany({
+                where: {
+                    academicYearId: activeYear.id,
+                    status: 'active',
+                },
+                select: {
+                    child: {
+                        select: {
+                            id: true,
+                            nickname: true,
+                            firstName: true,
+                            lastName: true,
+                            gender: true,
+                        },
+                    },
+                    level: {
+                        select: {
+                            code: true,
+                            color: true,
+                        },
+                    },
+                },
+                orderBy: { child: { nickname: 'asc' } },
+            }),
+            prisma.checkIn.findMany({
+                where: { date: today },
+                select: {
+                    id: true,
+                    childId: true,
+                    checkInAt: true,
+                    checkOutAt: true,
+                    child: {
+                        select: {
+                            nickname: true,
+                            gender: true,
+                        },
+                    },
+                },
+                orderBy: { checkInAt: 'desc' },
+            }),
         ])
+
     const savingsTotal = totalSavings._sum.amount ?? 0
-    const children = await prisma.child.findMany({
-        where: {
-            enrollments: {
-                some: { academicYearId: activeYear.id, status: 'active' }
-            }
-        },
-        include: {
-            enrollments: {
-                where: { academicYearId: activeYear.id, status: 'active' },
-                include: { level: true },
-                take: 1
-            }
-        }
-    })
-
-    const checkInsTodayArray = await prisma.checkIn.findMany({
-        where: { date: today },
-        include: { child: true },
-        orderBy: { checkInAt: 'desc' },
-    })
-
+    const allChildren = children.map((enrollment) => ({
+        ...enrollment.child,
+        enrollments: [{ level: enrollment.level }],
+    }))
+    const allCheckInsToday = checkInsTodayArray.map((record) => ({
+        childId: record.childId,
+        checkInAt: record.checkInAt,
+        checkOutAt: record.checkOutAt,
+    }))
     const checkInsToday = checkInsTodayArray.slice(0, 8)
 
     return {
@@ -74,11 +98,10 @@ async function getDashboardData() {
         presentToday,
         absentToday: totalChildren - presentToday,
         announcements,
-        recentActivities,
         totalSavings: savingsTotal,
         checkInsToday,
-        allChildren: children,
-        allCheckInsToday: checkInsTodayArray,
+        allChildren,
+        allCheckInsToday,
     }
 }
 
@@ -153,7 +176,7 @@ export default async function DashboardPage() {
                             การเช็กชื่อวันนี้
                         </h3>
                         <div className="flex gap-2">
-                            <DashboardClient children={data.allChildren} checkInsToday={data.allCheckInsToday} />
+                            <DashboardClient childList={data.allChildren} checkInsToday={data.allCheckInsToday} />
                             <a
                                 href="/checkin"
                                 className="text-xs font-medium px-2.5 py-1 rounded-lg"

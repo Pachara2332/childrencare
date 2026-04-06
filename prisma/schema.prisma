@@ -24,6 +24,8 @@ model AcademicYear {
     savings       Saving[]
     classLevels   ClassLevel[]
     payments      Payment[]
+
+    @@index([isActive])
 }
 
 // ─── ระดับชั้น (เตรียมอนุบาล / อนุบาล 1 / อนุบาล 2 ...) ─────────────────────
@@ -41,6 +43,7 @@ model ClassLevel {
     enrollments  ChildEnrollment[]
 
     @@unique([academicYearId, code])
+    @@index([academicYearId, order])
 }
 
 // ─── เด็ก ─────────────────────────────────────────────────────────────────────
@@ -91,6 +94,9 @@ model ChildEnrollment {
     level        ClassLevel   @relation(fields: [levelId], references: [id])
 
     @@unique([childId, academicYearId])
+    @@index([academicYearId, status])
+    @@index([academicYearId, levelId, status])
+    @@index([levelId])
 }
 
 // ─── เช็กชื่อ ─────────────────────────────────────────────────────────────────
@@ -111,6 +117,7 @@ model CheckIn {
     child Child @relation(fields: [childId], references: [id])
 
     @@unique([childId, date])
+    @@index([date])
 }
 
 // ─── พัฒนาการ ─────────────────────────────────────────────────────────────────
@@ -131,6 +138,8 @@ model Development {
     recordedBy String  @default("teacher")
 
     child Child @relation(fields: [childId], references: [id])
+
+    @@index([childId, recordedAt])
 }
 
 // ─── กิจกรรมประจำวัน ──────────────────────────────────────────────────────────
@@ -157,6 +166,7 @@ model DailyActivity {
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 
     @@unique([childId, date])
+    @@index([academicYearId, date])
 }
 
 // ─── ประกาศ ───────────────────────────────────────────────────────────────────
@@ -172,6 +182,9 @@ model Announcement {
     createdAt      DateTime  @default(now())
 
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+    @@index([academicYearId, publishedAt])
+    @@index([expiresAt])
 }
 
 // ─── เงินออม ──────────────────────────────────────────────────────────────────
@@ -188,6 +201,10 @@ model Saving {
 
     child        Child        @relation(fields: [childId], references: [id])
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+    @@index([academicYearId, childId])
+    @@index([academicYearId, type])
+    @@index([childId, academicYearId, createdAt])
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -221,4 +238,6 @@ model Payment {
     academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 
     @@unique([childId, academicYearId, month, year])
+    @@index([academicYearId, year, month])
+    @@index([academicYearId, status])
 }

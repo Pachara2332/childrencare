@@ -37,7 +37,7 @@ export default function DevelopmentPage() {
     })
 
     useEffect(() => {
-        fetch('/api/children').then(r => r.json()).then(d => {
+        fetch('/api/children?lite=1').then(r => r.json()).then(d => {
             setChildren(d)
             if (d.length > 0) setSelectedChild(d[0].id)
         })

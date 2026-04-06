@@ -1,7 +1,7 @@
 // app/(dashboard)/activities/page.tsx
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { CardGridSkeleton } from '@/app/components/ui/Skeleton'
 import { Smile, Meh, Frown, Thermometer, Utensils, Moon, FileText, Camera, Download } from 'lucide-react'
@@ -44,21 +44,30 @@ export default function ActivitiesPage() {
         teacherNote: '',
     })
 
-    const fetchActivities = () => {
+    const fetchActivities = useCallback(async () => {
         setLoading(true)
-        fetch(`/api/activities?date=${date}`)
-            .then(r => r.json()).then(d => { setActivities(d); setLoading(false) })
-            .catch(() => setLoading(false))
-    }
+        try {
+            const res = await fetch(`/api/activities?date=${date}`)
+            setActivities(await res.json())
+        } finally {
+            setLoading(false)
+        }
+    }, [date])
 
     useEffect(() => {
-        fetch('/api/children').then(r => r.json()).then(d => {
+        fetch('/api/children?lite=1').then(r => r.json()).then(d => {
             setChildren(d)
             if (d.length) setForm(f => ({ ...f, childId: String(d[0].id) }))
         })
     }, [])
 
-    useEffect(() => { fetchActivities() }, [date])
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void fetchActivities()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [fetchActivities])
 
     const toggleActivity = (act: string) => {
         setForm(f => ({
@@ -80,11 +89,15 @@ export default function ActivitiesPage() {
                 sleepMinutes: form.sleepMinutes ? Number(form.sleepMinutes) : null,
             }),
         })
-        if (res.ok) { setShowForm(false); fetchActivities() }
+        if (res.ok) { setShowForm(false); await fetchActivities() }
         setSaving(false)
     }
 
-    const getActivity = useCallback((childId: number) => activities.find(a => a.childId === childId), [activities])
+    const activityMap = useMemo(
+        () => new Map(activities.map((activity) => [activity.childId, activity])),
+        [activities]
+    )
+    const getActivity = useCallback((childId: number) => activityMap.get(childId), [activityMap])
 
     return (
         <div className="space-y-4 animate-fade-up">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, UserCheck, Check, Loader2 } from 'lucide-react'
+import { Search, UserCheck, Loader2 } from 'lucide-react'
 import Modal from '@/app/components/ui/Modal'
 import { useRouter } from 'next/navigation'
 
@@ -21,10 +21,10 @@ interface CheckInRecord {
 }
 
 export default function DashboardClient({
-    children,
+    childList,
     checkInsToday
 }: {
-    children: Child[]
+    childList: Child[]
     checkInsToday: CheckInRecord[]
 }) {
     const [open, setOpen] = useState(false)
@@ -35,6 +35,10 @@ export default function DashboardClient({
     const router = useRouter()
 
     const todayDateStr = new Date().toISOString().split('T')[0]
+    const recordByChildId = useMemo(
+        () => new Map(checkInsToday.map((record) => [record.childId, record])),
+        [checkInsToday]
+    )
 
     // Debounce search — 200ms
     useEffect(() => {
@@ -44,21 +48,21 @@ export default function DashboardClient({
 
     const filteredChildren = useMemo(() => {
         const s = debouncedSearch.toLowerCase()
-        const list = !s ? children : children.filter(c => 
+        const list = !s ? childList : childList.filter(c => 
             c.nickname.toLowerCase().includes(s) || 
             c.firstName.toLowerCase().includes(s)
         )
         // Sort: ยังไม่มา → อยู่ในศูนย์ → กลับบ้านแล้ว
-        return list.sort((a, b) => {
-            const recA = checkInsToday.find(r => r.childId === a.id)
-            const recB = checkInsToday.find(r => r.childId === b.id)
+        return [...list].sort((a, b) => {
+            const recA = recordByChildId.get(a.id)
+            const recB = recordByChildId.get(b.id)
             const orderA = !recA?.checkInAt ? 0 : !recA.checkOutAt ? 1 : 2
             const orderB = !recB?.checkInAt ? 0 : !recB.checkOutAt ? 1 : 2
             return orderA - orderB
         })
-    }, [children, debouncedSearch, checkInsToday])
+    }, [childList, debouncedSearch, recordByChildId])
 
-    const getRecord = (childId: number) => checkInsToday.find(r => r.childId === childId)
+    const getRecord = (childId: number) => recordByChildId.get(childId)
 
     const handleManualCheckIn = async (childId: number, type: 'in' | 'out') => {
         setProcessing(childId)

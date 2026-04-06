@@ -15,10 +15,31 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const yearId = searchParams.get('yearId')
+  const lite = searchParams.get('lite') === '1'
 
   const where = yearId
     ? { enrollments: { some: { academicYearId: Number(yearId) } } }
     : {}
+
+  if (lite) {
+    const children = await prisma.child.findMany({
+      where,
+      select: {
+        id: true,
+        code: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        gender: true,
+        qrToken: true,
+        disease: true,
+        parentName: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    return NextResponse.json(children)
+  }
 
   const children = await prisma.child.findMany({
     where,

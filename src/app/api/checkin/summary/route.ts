@@ -23,53 +23,62 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ present: 0, checkedOut: 0, unchecked: 0, total: 0, uncheckedChildren: [] })
   }
 
-  // Get all active enrolled children
-  const enrolledChildren = await prisma.child.findMany({
-    where: {
-      enrollments: {
-        some: { academicYearId: activeYear.id, status: 'active' },
+  const [enrollments, checkIns] = await Promise.all([
+    prisma.childEnrollment.findMany({
+      where: {
+        academicYearId: activeYear.id,
+        status: 'active',
       },
-    },
-    select: {
-      id: true,
-      nickname: true,
-      firstName: true,
-      gender: true,
-      enrollments: {
-        where: { academicYearId: activeYear.id, status: 'active' },
-        include: { level: true },
-        take: 1,
+      select: {
+        childId: true,
+        child: {
+          select: {
+            id: true,
+            nickname: true,
+            firstName: true,
+            gender: true,
+          },
+        },
+        level: {
+          select: {
+            code: true,
+            color: true,
+          },
+        },
       },
-    },
-  })
+    }),
+    prisma.checkIn.findMany({
+      where: { date },
+      select: {
+        childId: true,
+        checkInAt: true,
+        checkOutAt: true,
+        isAbsent: true,
+      },
+    }),
+  ])
 
-  // Get today's check-ins
-  const checkIns = await prisma.checkIn.findMany({
-    where: { date },
-    select: {
-      childId: true,
-      checkInAt: true,
-      checkOutAt: true,
-      isAbsent: true,
-    },
-  })
+  let present = 0
+  let checkedOut = 0
+  let absent = 0
+  const handledIds = new Set<number>()
 
-  const checkInMap = new Map(checkIns.map(c => [c.childId, c]))
+  for (const checkIn of checkIns) {
+    if (checkIn.checkOutAt) checkedOut += 1
+    if (checkIn.checkInAt && !checkIn.checkOutAt) present += 1
+    if (checkIn.isAbsent && !checkIn.checkInAt) absent += 1
+    if (checkIn.checkInAt || checkIn.isAbsent) handledIds.add(checkIn.childId)
+  }
 
-  const present = checkIns.filter(c => c.checkInAt && !c.checkOutAt).length
-  const checkedOut = checkIns.filter(c => c.checkOutAt).length
-  const absent = checkIns.filter(c => c.isAbsent && !c.checkInAt).length
-  const handledIds = new Set(checkIns.filter(c => c.checkInAt || c.isAbsent).map(c => c.childId))
-
-  const uncheckedChildren = enrolledChildren
-    .filter(c => !handledIds.has(c.id))
-    .map(c => ({
-      id: c.id,
-      nickname: c.nickname,
-      firstName: c.firstName,
-      gender: c.gender,
-      levelCode: c.enrollments[0]?.level?.code ?? null,
-      levelColor: c.enrollments[0]?.level?.color ?? null,
+  const uncheckedChildren = enrollments
+    .filter((enrollment) => !handledIds.has(enrollment.childId))
+    .map((enrollment) => ({
+      id: enrollment.child.id,
+      nickname: enrollment.child.nickname,
+      firstName: enrollment.child.firstName,
+      gender: enrollment.child.gender,
+      levelCode: enrollment.level.code,
+      levelColor: enrollment.level.color,
     }))
 
   return NextResponse.json({
@@ -77,7 +86,7 @@ export async function GET(req: NextRequest) {
     checkedOut,
     absent,
     unchecked: uncheckedChildren.length,
-    total: enrolledChildren.length,
+    total: enrollments.length,
     uncheckedChildren,
   })
 }

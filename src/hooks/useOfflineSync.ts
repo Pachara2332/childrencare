@@ -14,24 +14,35 @@ export interface OfflineAction {
     timestamp: number
 }
 
+function loadOfflineQueue(): OfflineAction[] {
+    if (typeof window === 'undefined') return []
+
+    try {
+        const saved = localStorage.getItem('checkin_offline_queue')
+        return saved ? JSON.parse(saved) as OfflineAction[] : []
+    } catch (error) {
+        console.error('Failed to load offline queue:', error)
+        return []
+    }
+}
+
 export function useOfflineSync(onSuccess?: () => void) {
-    const [isOnline, setIsOnline] = useState(true)
-    const [queue, setQueue] = useState<OfflineAction[]>([])
+    const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine)
+    const [queue, setQueue] = useState<OfflineAction[]>(loadOfflineQueue)
     const [isSyncing, setIsSyncing] = useState(false)
 
-    // Load queue from localStorage on mount
-    useEffect(() => {
-        setIsOnline(navigator.onLine)
-        
-        try {
-            const saved = localStorage.getItem('checkin_offline_queue')
-            if (saved) {
-                setQueue(JSON.parse(saved))
-            }
-        } catch (e) {
-            console.error('Failed to load offline queue:', e)
+    const persistQueue = useCallback((nextQueue: OfflineAction[]) => {
+        if (typeof window === 'undefined') return
+
+        if (nextQueue.length === 0) {
+            localStorage.removeItem('checkin_offline_queue')
+            return
         }
 
+        localStorage.setItem('checkin_offline_queue', JSON.stringify(nextQueue))
+    }, [])
+
+    useEffect(() => {
         const handleOnline = () => setIsOnline(true)
         const handleOffline = () => setIsOnline(false)
 
@@ -44,7 +55,6 @@ export function useOfflineSync(onSuccess?: () => void) {
         }
     }, [])
 
-    // Sync function
     const syncQueue = useCallback(async () => {
         if (!isOnline || queue.length === 0 || isSyncing) return
 
@@ -69,7 +79,7 @@ export function useOfflineSync(onSuccess?: () => void) {
                     const data = await res.json().catch(() => null)
                     console.warn('Action failed but removing from queue to prevent block:', action, data)
                 }
-            } catch (err) {
+            } catch {
                 // Network error, keep in queue
                 remainingQueue.push(action)
             }
@@ -80,15 +90,18 @@ export function useOfflineSync(onSuccess?: () => void) {
         }
 
         setQueue(remainingQueue)
-        localStorage.setItem('checkin_offline_queue', JSON.stringify(remainingQueue))
+        persistQueue(remainingQueue)
         setIsSyncing(false)
-    }, [isOnline, queue, isSyncing, onSuccess])
+    }, [isOnline, queue, isSyncing, onSuccess, persistQueue])
 
-    // Auto-sync when coming back online
     useEffect(() => {
-        if (isOnline && queue.length > 0 && !isSyncing) {
-            syncQueue()
-        }
+        if (!isOnline || queue.length === 0 || isSyncing) return
+
+        const timeoutId = window.setTimeout(() => {
+            void syncQueue()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
     }, [isOnline, queue.length, isSyncing, syncQueue])
 
     const addAction = useCallback((action: Omit<OfflineAction, 'id' | 'timestamp'>) => {
@@ -100,14 +113,16 @@ export function useOfflineSync(onSuccess?: () => void) {
         
         setQueue(prev => {
             const next = [...prev, fullAction]
-            localStorage.setItem('checkin_offline_queue', JSON.stringify(next))
+            persistQueue(next)
             return next
         })
-    }, [])
+    }, [persistQueue])
 
     const clearQueue = useCallback(() => {
         setQueue([])
-        localStorage.removeItem('checkin_offline_queue')
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('checkin_offline_queue')
+        }
     }, [])
 
     return {

@@ -24,47 +24,63 @@ export async function POST(request: Request) {
             const enrollments = await prisma.childEnrollment.findMany({
                 where: { academicYearId: activeYear.id, levelId: Number(levelId) }
             })
-            targetChildrenIds = enrollments.map((e: any) => e.childId)
+            targetChildrenIds = enrollments.map((enrollment) => enrollment.childId)
         }
 
-        const summaries = []
+        if (targetChildrenIds.length === 0) {
+            return NextResponse.json({
+                message: 'Payout completed',
+                count: 0,
+                payouts: []
+            }, { status: 201 })
+        }
 
-        for (const cid of targetChildrenIds) {
-            const existingPayout = await prisma.saving.findFirst({
-                where: { childId: cid, academicYearId: activeYear.id, type: 'payout' }
+        const [existingPayouts, balances] = await Promise.all([
+            prisma.saving.findMany({
+                where: {
+                    childId: { in: targetChildrenIds },
+                    academicYearId: activeYear.id,
+                    type: 'payout'
+                },
+                select: { childId: true }
+            }),
+            prisma.saving.groupBy({
+                by: ['childId'],
+                where: {
+                    childId: { in: targetChildrenIds },
+                    academicYearId: activeYear.id
+                },
+                _sum: { amount: true }
             })
-            
-            if (existingPayout) continue
+        ])
 
-            const transactions = await prisma.saving.findMany({
-                where: { childId: cid, academicYearId: activeYear.id }
+        const payoutChildIds = new Set(existingPayouts.map((item) => item.childId))
+        const payoutRows = balances
+            .filter((item) => !payoutChildIds.has(item.childId) && (item._sum.amount ?? 0) > 0)
+            .map((item) => ({
+                childId: item.childId,
+                academicYearId: activeYear.id,
+                date: new Date(),
+                amount: -(item._sum.amount ?? 0),
+                type: 'payout',
+                note: 'เธ–เธญเธเธเธเธเธต / เธฅเธฒเธญเธญเธ',
+                recordedBy: 'system/teacher'
+            }))
+
+        if (payoutRows.length > 0) {
+            await prisma.saving.createMany({
+                data: payoutRows
             })
-            
-            const balance = transactions.reduce((sum: number, t: any) => sum + t.amount, 0)
-            
-            if (balance > 0) {
-                const payout = await prisma.saving.create({
-                    data: {
-                        childId: cid,
-                        academicYearId: activeYear.id,
-                        date: new Date(),
-                        amount: -balance,
-                        type: 'payout',
-                        note: 'ถอนจบปี / ลาออก',
-                        recordedBy: 'system/teacher'
-                    }
-                })
-                summaries.push(payout)
-            }
         }
 
         return NextResponse.json({
             message: 'Payout completed',
-            count: summaries.length,
-            payouts: summaries
+            count: payoutRows.length,
+            payouts: payoutRows
         }, { status: 201 })
 
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }

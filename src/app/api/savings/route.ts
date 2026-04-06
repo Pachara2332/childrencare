@@ -16,9 +16,16 @@ export async function POST(request: Request) {
 
         if (!activeYear) return NextResponse.json({ error: 'No active academic year' }, { status: 404 })
 
-        const payoutRecord = await prisma.saving.findFirst({
-            where: { childId: Number(childId), academicYearId: activeYear.id, type: 'payout' }
-        })
+        const numericChildId = Number(childId)
+        const [payoutRecord, balanceResult] = await Promise.all([
+            prisma.saving.findFirst({
+                where: { childId: numericChildId, academicYearId: activeYear.id, type: 'payout' }
+            }),
+            prisma.saving.aggregate({
+                where: { childId: numericChildId, academicYearId: activeYear.id },
+                _sum: { amount: true }
+            })
+        ])
 
         if (payoutRecord && type === 'deposit') {
             return NextResponse.json({ error: 'Cannot deposit after payout has been made' }, { status: 400 })
@@ -31,10 +38,7 @@ export async function POST(request: Request) {
             finalAmount = Math.abs(finalAmount)
         }
 
-        const allTransactions = await prisma.saving.findMany({
-            where: { childId: Number(childId), academicYearId: activeYear.id }
-        })
-        const currentBalance = allTransactions.reduce((sum: number, t: any) => sum + t.amount, 0)
+        const currentBalance = balanceResult._sum.amount ?? 0
 
         if ((type === 'withdraw' || type === 'payout') && currentBalance + finalAmount < 0) {
             return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
 
         const newSaving = await prisma.saving.create({
             data: {
-                childId: Number(childId),
+                childId: numericChildId,
                 academicYearId: activeYear.id,
                 date: new Date(),
                 amount: finalAmount,
@@ -57,7 +61,8 @@ export async function POST(request: Request) {
             balance: currentBalance + finalAmount
         }, { status: 201 })
 
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }

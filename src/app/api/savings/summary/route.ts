@@ -3,7 +3,23 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+type ClassSummary = {
+    levelId: number
+    name: string
+    color: string
+    order: number
+    total: number
+    children: {
+        childId: number
+        code: string
+        nickname: string
+        firstName: string
+        lastName: string
+        balance: number
+    }[]
+}
+
+export async function GET() {
     try {
         const activeYear = await prisma.academicYear.findFirst({
             where: { isActive: true }
@@ -13,25 +29,47 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'No active academic year found' }, { status: 404 })
         }
 
-        const enrollments = await prisma.childEnrollment.findMany({
-            where: { academicYearId: activeYear.id, status: { not: 'leave' } },
-            include: {
-                child: {
-                    include: {
-                        savings: {
-                            where: { academicYearId: activeYear.id }
+        const [enrollments, balances] = await Promise.all([
+            prisma.childEnrollment.findMany({
+                where: { academicYearId: activeYear.id, status: { not: 'leave' } },
+                select: {
+                    childId: true,
+                    levelId: true,
+                    child: {
+                        select: {
+                            code: true,
+                            nickname: true,
+                            firstName: true,
+                            lastName: true,
+                        }
+                    },
+                    level: {
+                        select: {
+                            name: true,
+                            color: true,
+                            order: true,
                         }
                     }
-                },
-                level: true
-            }
-        })
+                }
+            }),
+            prisma.saving.groupBy({
+                by: ['childId'],
+                where: { academicYearId: activeYear.id },
+                _sum: {
+                    amount: true
+                }
+            })
+        ])
+
+        const balanceMap = new Map<number, number>(
+            balances.map((item) => [item.childId, item._sum.amount ?? 0])
+        )
 
         let totalAll = 0
-        const classMap = new Map<number, any>()
+        const classMap = new Map<number, ClassSummary>()
 
         for (const en of enrollments) {
-            const childTotal = en.child.savings.reduce((sum: number, s: any) => sum + s.amount, 0)
+            const childTotal = balanceMap.get(en.childId) ?? 0
             totalAll += childTotal
 
             if (!classMap.has(en.levelId)) {
@@ -59,9 +97,19 @@ export async function GET(request: Request) {
 
         const byClass = Array.from(classMap.values()).sort((a, b) => a.order - b.order)
 
-        return NextResponse.json({ totalAll, byClass: byClass.map(({ order, ...rest }) => rest) })
+        return NextResponse.json({
+            totalAll,
+            byClass: byClass.map((item) => ({
+                levelId: item.levelId,
+                name: item.name,
+                color: item.color,
+                total: item.total,
+                children: item.children,
+            }))
+        })
 
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }

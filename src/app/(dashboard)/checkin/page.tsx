@@ -2,12 +2,13 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import Image from 'next/image'
 import QRCode from 'qrcode'
 import { StatsSkeleton, TableSkeleton } from '@/app/components/ui/Skeleton'
 import PickupDialog from '@/app/components/ui/PickupDialog'
 import AbsenceDialog from '@/app/components/ui/AbsenceDialog'
 import { useChildcareStore } from '@/store/useStore'
-import { ClipboardList, Search, Check, Users, LogIn, Loader2, Wifi, WifiOff, RefreshCw, Download } from 'lucide-react'
+import { ClipboardList, Search, Check, Users, LogIn, WifiOff, RefreshCw, Download } from 'lucide-react'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
 
@@ -27,6 +28,16 @@ interface CheckInRecord {
     isAbsent: boolean
     absenceReason: string | null
     method: string; child: Child
+}
+
+interface ManualCheckInPayload {
+    childId: number
+    type: 'in' | 'out' | 'absent'
+    date: string
+    method: 'manual'
+    pickupName?: string
+    pickupRelation?: string
+    note?: string
 }
 
 const LEVEL_COLOR_MAP: Record<string, { bg: string; text: string }> = {
@@ -62,17 +73,17 @@ export default function CheckInPage() {
     )
 
     const { activeYear, fetchPresentCount } = useChildcareStore()
+    const onSyncSuccessRef = useRef<() => void>(() => {})
 
-    const { isOnline, isSyncing, queue, addAction, syncQueue } = useOfflineSync(() => {
-        fetchRecords()
-        fetchPresentCount()
-        showToast('ซิงค์ข้อมูลสำเร็จ', true)
-    })
-
-    const showToast = (msg: string, ok: boolean) => {
+    const showToast = useCallback((msg: string, ok: boolean) => {
         setToast({ msg, ok })
         setTimeout(() => setToast(null), 3000)
-    }
+    }, [])
+
+    const { isOnline, isSyncing, queue, addAction, syncQueue } = useOfflineSync(() => {
+        onSyncSuccessRef.current()
+        showToast('ซิงค์ข้อมูลสำเร็จ', true)
+    })
 
     const fetchRecords = useCallback(async () => {
         setLoading(true)
@@ -81,8 +92,16 @@ export default function CheckInPage() {
         setLoading(false)
     }, [selectedDate])
 
+    useEffect(() => {
+        onSyncSuccessRef.current = () => {
+            void fetchRecords()
+            void fetchPresentCount()
+            showToast('ซิงค์ข้อมูลสำเร็จ', true)
+        }
+    }, [fetchRecords, fetchPresentCount, showToast])
+
     const fetchChildren = useCallback(async () => {
-        setChildren(await fetch('/api/children').then(r => r.json()))
+        setChildren(await fetch('/api/children?lite=1').then(r => r.json()))
     }, [])
 
     const fetchEnrollments = useCallback(async () => {
@@ -105,10 +124,44 @@ export default function CheckInPage() {
         }))
     }, [selectedDate])
 
-    useEffect(() => { fetchRecords() }, [fetchRecords])
-    useEffect(() => { fetchChildren() }, [fetchChildren])
-    useEffect(() => { fetchEnrollments() }, [fetchEnrollments])
-    useEffect(() => { if (tab === 'qr') generateQR() }, [tab, generateQR])
+    const childMap = useMemo(
+        () => new Map(children.map((child) => [child.id, child])),
+        [children]
+    )
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void fetchRecords()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [fetchRecords])
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void fetchChildren()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [fetchChildren])
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void fetchEnrollments()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [fetchEnrollments])
+
+    useEffect(() => {
+        if (tab !== 'qr') return
+
+        const timeoutId = window.setTimeout(() => {
+            void generateQR()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [tab, generateQR])
 
     // Debounce search — 200ms
     useEffect(() => {
@@ -124,7 +177,7 @@ export default function CheckInPage() {
     }, [tab])
 
     const handleManualCheckIn = async (childId: number, type: 'in' | 'out' | 'absent', pickupName?: string, pickupRelation?: string, note?: string) => {
-        const payload: any = { childId, type, date: selectedDate, method: 'manual' }
+        const payload: ManualCheckInPayload = { childId, type, date: selectedDate, method: 'manual' }
         if (pickupName) payload.pickupName = pickupName
         if (pickupRelation) payload.pickupRelation = pickupRelation
         if (note) payload.note = note
@@ -139,8 +192,8 @@ export default function CheckInPage() {
             if (res.ok) {
                 const successMsg = type === 'in' ? 'เช็กเข้า' : type === 'out' ? 'เช็กออก' : 'แจ้งลา'
                 showToast(`บันทึก${successMsg}เรียบร้อย`, true)
-                fetchRecords()
-                fetchPresentCount()
+                void fetchRecords()
+                void fetchPresentCount()
                 // Check for siblings on check-in
                 if (type === 'in') {
                     try {
@@ -161,7 +214,7 @@ export default function CheckInPage() {
             } else {
                 showToast(data.message, false)
             }
-        } catch (error) {
+        } catch {
             // Offline queueing
             addAction(payload)
             const successMsg = type === 'in' ? 'เช็กเข้า' : type === 'out' ? 'เช็กออก' : 'แจ้งลา'
@@ -178,7 +231,7 @@ export default function CheckInPage() {
                     if (type === 'out') newRecord.checkOutAt = now
                     if (type === 'absent') { newRecord.isAbsent = true; newRecord.absenceReason = note ?? null }
                 } else {
-                    const c = children.find(ch => ch.id === childId)
+                    const c = childMap.get(childId)
                     newRecord = {
                         id: Math.random(),
                         childId,
@@ -204,9 +257,17 @@ export default function CheckInPage() {
         setAbsentChild(null)
     }
 
-    const getChildLevel = useCallback((childId: number) => enrollments.find(e => e.childId === childId)?.level ?? null, [enrollments])
+    const enrollmentLevelMap = useMemo(
+        () => new Map(enrollments.map((enrollment) => [enrollment.childId, enrollment.level])),
+        [enrollments]
+    )
+    const recordMap = useMemo(
+        () => new Map(records.map((record) => [record.childId, record])),
+        [records]
+    )
+    const getChildLevel = useCallback((childId: number) => enrollmentLevelMap.get(childId) ?? null, [enrollmentLevelMap])
     const filteredRecords = useMemo(() => records.filter(r => selectedLevelId === 'all' || getChildLevel(r.childId)?.id === selectedLevelId), [records, selectedLevelId, getChildLevel])
-    const getRecord = useCallback((childId: number) => records.find(r => r.childId === childId), [records])
+    const getRecord = useCallback((childId: number) => recordMap.get(childId), [recordMap])
 
     // Sort: ยังไม่มา → อยู่ในศูนย์ → กลับบ้านแล้ว (ลาไปอยู่ท้ายสุด)
     const getStatusOrder = useCallback((childId: number) => {
@@ -499,7 +560,7 @@ export default function CheckInPage() {
                         </p>
                         {qrDataUrl ? (
                             <>
-                                <img src={qrDataUrl} alt="QR Code" className="mx-auto rounded-xl mb-4" style={{ width: 200, height: 200 }} />
+                                <Image src={qrDataUrl} alt="QR Code" className="mx-auto rounded-xl mb-4" width={200} height={200} unoptimized />
                                 <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>
                                     วันที่ {new Date(selectedDate).toLocaleDateString('th-TH')}
                                 </p>

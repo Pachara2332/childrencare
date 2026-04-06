@@ -2,8 +2,8 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
-import { Search, LogIn, LogOut, Check, Loader2, UserSearch, Users, CalendarX2, Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { useEffect, useState, useRef, useMemo, Suspense } from 'react'
+import { Search, LogIn, LogOut, Check, Loader2, UserSearch, Users, CalendarX2, WifiOff, RefreshCw } from 'lucide-react'
 import PickupDialog from '@/app/components/ui/PickupDialog'
 import AbsenceDialog from '@/app/components/ui/AbsenceDialog'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
@@ -33,6 +33,16 @@ interface Sibling {
     gender: string
 }
 
+interface CheckInPayload {
+    childId: number
+    type: 'in' | 'out' | 'absent'
+    date: string
+    method: 'qr'
+    pickupName?: string
+    pickupRelation?: string
+    note?: string
+}
+
 function ParentCheckIn() {
     const params = useSearchParams()
     const date = params.get('date') ?? new Date().toISOString().split('T')[0]
@@ -48,17 +58,21 @@ function ParentCheckIn() {
     const [checkoutChild, setCheckoutChild] = useState<{ id: number, nickname: string } | null>(null)
     const [absentChild, setAbsentChild] = useState<{ id: number, nickname: string } | null>(null)
     const searchRef = useRef<HTMLInputElement>(null)
+    const recordMap = useMemo(
+        () => new Map(records.map((record) => [record.childId, record])),
+        [records]
+    )
+
+    function showToast(msg: string, ok: boolean) {
+        setToast({ msg, ok })
+        setTimeout(() => setToast(null), 3000)
+    }
 
     const { isOnline, isSyncing, queue, addAction, syncQueue } = useOfflineSync(() => {
         // Refresh records when sync succeeds
         fetch(`/api/checkin/public?date=${date}`).then(r => r.json()).then(setRecords)
         showToast('ซิงค์ข้อมูลสำเร็จ', true)
     })
-
-    const showToast = (msg: string, ok: boolean) => {
-        setToast({ msg, ok })
-        setTimeout(() => setToast(null), 3000)
-    }
 
     // Auto-focus search on load
     useEffect(() => {
@@ -75,7 +89,7 @@ function ParentCheckIn() {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/children').then(r => r.json()),
+            fetch('/api/children?lite=1').then(r => r.json()),
             fetch(`/api/checkin/public?date=${date}`).then(r => r.json()),
         ]).then(([c, r]) => {
             setChildren(c)
@@ -86,7 +100,7 @@ function ParentCheckIn() {
 
     const handleAction = async (childId: number, type: 'in' | 'out' | 'absent', pickupName?: string, pickupRelation?: string, note?: string) => {
         setProcessing(childId)
-        const payload: any = { childId, type, date, method: 'qr' }
+        const payload: CheckInPayload = { childId, type, date, method: 'qr' }
         if (pickupName) payload.pickupName = pickupName
         if (pickupRelation) payload.pickupRelation = pickupRelation
         if (note) payload.note = note
@@ -130,7 +144,7 @@ function ParentCheckIn() {
             } else {
                 showToast(data.message, false)
             }
-        } catch (error) {
+        } catch {
             // Network error => enqueue
             addAction(payload)
             const offlineMsg = type === 'in' ? 'เช็กเข้า (ออฟไลน์)' : type === 'out' ? 'เช็กออก (ออฟไลน์)' : 'แจ้งลา (ออฟไลน์)'
@@ -160,7 +174,7 @@ function ParentCheckIn() {
         setAbsentChild(null)
     }
 
-    const getRecord = (childId: number) => records.find(r => r.childId === childId)
+    const getRecord = (childId: number) => recordMap.get(childId)
 
     // Sort: ยังไม่มา → อยู่ในศูนย์ → กลับบ้านแล้ว
     const getStatusOrder = (childId: number) => {

@@ -1,9 +1,9 @@
 // app/(dashboard)/payments/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Modal from '@/app/components/ui/Modal'
-import { StatsCardsSkeleton, TableSkeleton } from '@/app/components/ui/Skeleton'
+import { TableSkeleton } from '@/app/components/ui/Skeleton'
 import { CreditCard, Coins, CheckCircle, Banknote, Smartphone, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
@@ -48,20 +48,30 @@ export default function PaymentsPage() {
     })
     const [payForm, setPayForm] = useState({ paidMethod: 'cash', receiptNo: '', note: '' })
 
-    const fetchPayments = () => {
+    const fetchPayments = useCallback(async () => {
         setLoading(true)
-        fetch(`/api/payments?month=${selectedMonth}&year=${selectedYear}`)
-            .then(r => r.json()).then(d => { setPayments(d); setLoading(false) })
-    }
+        try {
+            const res = await fetch(`/api/payments?month=${selectedMonth}&year=${selectedYear}`)
+            setPayments(await res.json())
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedMonth, selectedYear])
 
     useEffect(() => {
-        fetch('/api/children').then(r => r.json()).then(d => {
+        fetch('/api/children?lite=1').then(r => r.json()).then(d => {
             setChildren(d)
             if (d.length) setAddForm(f => ({ ...f, childId: String(d[0].id) }))
         })
     }, [])
 
-    useEffect(() => { fetchPayments() }, [selectedMonth, selectedYear])
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void fetchPayments()
+        }, 0)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [fetchPayments])
 
     const handleAddPayment = async () => {
         setSaving(true)
@@ -74,7 +84,7 @@ export default function PaymentsPage() {
                 maintenanceFee: Number(addForm.maintenanceFee), foodFee: Number(addForm.foodFee), otherFee: Number(addForm.otherFee),
             }),
         })
-        if (res.ok) { setShowAdd(false); fetchPayments() }
+        if (res.ok) { setShowAdd(false); await fetchPayments() }
         setSaving(false)
     }
 
@@ -87,14 +97,26 @@ export default function PaymentsPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payForm),
         })
-        if (res.ok) { setShowPay(null); fetchPayments() }
+        if (res.ok) { setShowPay(null); await fetchPayments() }
         setSaving(false)
     }
 
-    const filtered = filterStatus === 'all' ? payments : payments.filter(p => p.status === filterStatus)
-    const totalCollected = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.maintenanceFee + p.foodFee + p.otherFee, 0)
-    const totalPending = payments.filter(p => p.status !== 'paid' && p.status !== 'waived').reduce((s, p) => s + p.maintenanceFee + p.foodFee + p.otherFee, 0)
-    const payRate = payments.length ? Math.round(payments.filter(p => p.status === 'paid').length / payments.length * 100) : 0
+    const filtered = useMemo(
+        () => filterStatus === 'all' ? payments : payments.filter(p => p.status === filterStatus),
+        [filterStatus, payments]
+    )
+    const totalCollected = useMemo(
+        () => payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.maintenanceFee + p.foodFee + p.otherFee, 0),
+        [payments]
+    )
+    const totalPending = useMemo(
+        () => payments.filter(p => p.status !== 'paid' && p.status !== 'waived').reduce((s, p) => s + p.maintenanceFee + p.foodFee + p.otherFee, 0),
+        [payments]
+    )
+    const payRate = useMemo(
+        () => payments.length ? Math.round(payments.filter(p => p.status === 'paid').length / payments.length * 100) : 0,
+        [payments]
+    )
 
     return (
         <div className="space-y-4 animate-fade-up">

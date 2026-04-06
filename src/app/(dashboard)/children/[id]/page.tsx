@@ -5,8 +5,13 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import QRCode from 'qrcode'
 import { Skeleton } from '@/app/components/ui/Skeleton'
-import { ArrowLeft, User, Search, Baby, UserCircle, Cake, Droplets, HeartPulse, Stethoscope, AlertTriangle, Users, BookOpen, Activity, AlertCircle, Phone, Target, MapPin, QrCode, ClipboardList, CheckCircle2, History, XCircle, BarChart3, TrendingUp, Award, Smile, Scale, Download } from 'lucide-react'
+import { ArrowLeft, User, Baby, UserCircle, Cake, Droplets, HeartPulse, Users, BookOpen, Activity, Target, QrCode, ClipboardList, CheckCircle2, History, XCircle, BarChart3, TrendingUp, Award, Scale, Download } from 'lucide-react'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
+import {
+    EnrollmentStatus,
+    enrollmentStatusLabels,
+    getEnrollmentStatusTone,
+} from '@/lib/enrollmentStatus'
 
 interface Child {
     id: number
@@ -25,7 +30,14 @@ interface Child {
     parentRelation: string
     address: string | null
     qrToken: string
-    enrollments: { id: number; status: string; academicYear: { name: string } }[]
+    enrollments: {
+        id: number
+        status: EnrollmentStatus
+        statusDate: string | null
+        statusReason: string | null
+        academicYear: { name: string }
+        level: { name: string; code: string }
+    }[]
 }
 
 interface Development {
@@ -119,6 +131,15 @@ export default function ChildProfilePage() {
         if (!checkIns.length) return 0
         const present = checkIns.filter(c => c.checkInAt).length
         return Math.round((present / checkIns.length) * 100)
+    }
+
+    const formatStatusDate = (value: string | null) => {
+        if (!value) return 'ยังไม่ระบุ'
+        return new Date(value).toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        })
     }
 
     if (loading) return (
@@ -374,19 +395,44 @@ export default function ChildProfilePage() {
                         {/* Enrollment */}
                         <div className="mt-4">
                             <p className="text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>ปีการศึกษาที่ลงทะเบียน</p>
-                            <div className="flex flex-wrap gap-2">
-                                {child.enrollments.map(e => (
-                                    <span
-                                        key={e.id}
-                                        className="text-xs px-2.5 py-1 rounded-full font-semibold"
-                                        style={{
-                                            background: e.status === 'active' ? '#D8F3DC' : 'var(--cream)',
-                                            color: e.status === 'active' ? '#1B4332' : 'var(--muted)',
-                                        }}
-                                    >
-                                        {e.academicYear.name}
-                                    </span>
-                                ))}
+                            <div className="space-y-2">
+                                {child.enrollments.map((enrollment) => {
+                                    const tone = getEnrollmentStatusTone(enrollment.status)
+
+                                    return (
+                                        <div
+                                            key={enrollment.id}
+                                            className="rounded-xl px-3 py-2.5"
+                                            style={{ background: 'var(--cream)', border: '1px solid var(--warm)' }}
+                                        >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                                                    {enrollment.academicYear.name}
+                                                </span>
+                                                <span
+                                                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                                                    style={{ background: tone.bg, color: tone.text }}
+                                                >
+                                                    {enrollmentStatusLabels[enrollment.status]}
+                                                </span>
+                                                <span
+                                                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                                                    style={{ background: 'white', color: 'var(--muted)', border: '1px solid var(--warm)' }}
+                                                >
+                                                    {enrollment.level.name} ({enrollment.level.code})
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                                                วันที่สถานะ: {formatStatusDate(enrollment.statusDate)}
+                                            </p>
+                                            {enrollment.statusReason && (
+                                                <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                                                    เหตุผล: {enrollment.statusReason}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>

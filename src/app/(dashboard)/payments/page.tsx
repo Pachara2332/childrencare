@@ -7,6 +7,12 @@ import { TableSkeleton } from '@/app/components/ui/Skeleton'
 import { CreditCard, Coins, CheckCircle, Banknote, Smartphone, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
+import { useChildcareStore } from '@/store/useStore'
+import {
+    EnrollmentStatus,
+    ENROLLMENT_STATUSES,
+    enrollmentStatusLabels,
+} from '@/lib/enrollmentStatus'
 
 interface Payment {
     id: number; childId: number; month: number; year: number
@@ -33,6 +39,7 @@ export default function PaymentsPage() {
     const [children, setChildren] = useState<Child[]>([])
     const [loading, setLoading] = useState(true)
     const [filterStatus, setFilterStatus] = useState('all')
+    const [selectedEnrollmentStatus, setSelectedEnrollmentStatus] = useState<EnrollmentStatus | 'all'>('active')
     const [showAdd, setShowAdd] = useState(false)
     const [showPay, setShowPay] = useState<Payment | null>(null)
     const [saving, setSaving] = useState(false)
@@ -47,23 +54,47 @@ export default function PaymentsPage() {
         maintenanceFee: '0', foodFee: '300', otherFee: '0', otherFeeNote: '', dueDate: '', note: '',
     })
     const [payForm, setPayForm] = useState({ paidMethod: 'cash', receiptNo: '', note: '' })
+    const { activeYear, fetchAcademicYears } = useChildcareStore()
 
     const fetchPayments = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await fetch(`/api/payments?month=${selectedMonth}&year=${selectedYear}`)
+            const params = new URLSearchParams({
+                month: String(selectedMonth),
+                year: String(selectedYear),
+            })
+            if (activeYear?.id) params.set('academicYearId', String(activeYear.id))
+
+            const res = await fetch(`/api/payments?${params.toString()}`)
             setPayments(await res.json())
         } finally {
             setLoading(false)
         }
-    }, [selectedMonth, selectedYear])
+    }, [selectedMonth, selectedYear, activeYear?.id])
 
     useEffect(() => {
-        fetch('/api/children?lite=1').then(r => r.json()).then(d => {
+        if (!activeYear) {
+            void fetchAcademicYears()
+        }
+    }, [activeYear, fetchAcademicYears])
+
+    useEffect(() => {
+        const params = new URLSearchParams({ lite: '1', status: selectedEnrollmentStatus })
+        if (activeYear?.id) params.set('yearId', String(activeYear.id))
+
+        fetch(`/api/children?${params.toString()}`).then(r => r.json()).then(d => {
             setChildren(d)
-            if (d.length) setAddForm(f => ({ ...f, childId: String(d[0].id) }))
+            setAddForm(f => ({
+                ...f,
+                childId:
+                    d.some((child: Child) => String(child.id) === f.childId)
+                        ? f.childId
+                        : d.length
+                            ? String(d[0].id)
+                            : '',
+            }))
         })
-    }, [])
+    }, [activeYear?.id, selectedEnrollmentStatus])
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -74,12 +105,14 @@ export default function PaymentsPage() {
     }, [fetchPayments])
 
     const handleAddPayment = async () => {
+        if (!activeYear) return
         setSaving(true)
         const res = await fetch('/api/payments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...addForm,
+                academicYearId: activeYear.id,
                 childId: Number(addForm.childId), month: Number(addForm.month), year: Number(addForm.year),
                 maintenanceFee: Number(addForm.maintenanceFee), foodFee: Number(addForm.foodFee), otherFee: Number(addForm.otherFee),
             }),
@@ -126,6 +159,18 @@ export default function PaymentsPage() {
                     {thaiMonths.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
                 <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="w-24 px-3 py-1.5 rounded-lg text-sm input-field" />
+                <select
+                    value={selectedEnrollmentStatus}
+                    onChange={e => setSelectedEnrollmentStatus(e.target.value as EnrollmentStatus | 'all')}
+                    className="px-3 py-1.5 rounded-lg text-sm input-field"
+                >
+                    <option value="all">ทุกสถานะนักเรียน</option>
+                    {ENROLLMENT_STATUSES.map(status => (
+                        <option key={status} value={status}>
+                            {enrollmentStatusLabels[status]}
+                        </option>
+                    ))}
+                </select>
                 <div className="ml-auto flex items-center gap-2">
                     <button
                         onClick={() => {
@@ -304,7 +349,7 @@ export default function PaymentsPage() {
                 </div>
                 <div className="flex gap-3 mt-5">
                     <button onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm btn-secondary">ยกเลิก</button>
-                    <button onClick={handleAddPayment} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm btn-primary">
+                    <button onClick={handleAddPayment} disabled={saving || !activeYear || !addForm.childId} className="flex-1 py-2.5 rounded-xl text-sm btn-primary disabled:opacity-50">
                         {saving ? 'กำลังบันทึก...' : 'บันทึก'}
                     </button>
                 </div>

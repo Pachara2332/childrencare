@@ -5,6 +5,12 @@ import { useEffect, useState } from 'react'
 import Modal from '@/app/components/ui/Modal'
 import { MessageCircle, Activity, Brain, Heart, Users, TrendingUp, Scale, Ruler, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
+import { useChildcareStore } from '@/store/useStore'
+import {
+    EnrollmentStatus,
+    ENROLLMENT_STATUSES,
+    enrollmentStatusLabels,
+} from '@/lib/enrollmentStatus'
 
 interface Child { id: number; code: string; nickname: string; firstName: string; gender: string }
 interface Development {
@@ -27,6 +33,7 @@ export default function DevelopmentPage() {
     const [children, setChildren] = useState<Child[]>([])
     const [records, setRecords] = useState<Development[]>([])
     const [selectedChild, setSelectedChild] = useState<number | null>(null)
+    const [selectedEnrollmentStatus, setSelectedEnrollmentStatus] = useState<EnrollmentStatus | 'all'>('active')
     const [showForm, setShowForm] = useState(false)
     const [saving, setSaving] = useState(false)
     const [form, setForm] = useState({
@@ -35,13 +42,28 @@ export default function DevelopmentPage() {
         scoreIntellect: '', scoreEmotional: '', scoreSocial: '',
         note: '',
     })
+    const { activeYear, fetchAcademicYears } = useChildcareStore()
 
     useEffect(() => {
-        fetch('/api/children?lite=1').then(r => r.json()).then(d => {
+        if (!activeYear) {
+            void fetchAcademicYears()
+        }
+    }, [activeYear, fetchAcademicYears])
+
+    useEffect(() => {
+        const params = new URLSearchParams({ lite: '1', status: selectedEnrollmentStatus })
+        if (activeYear?.id) params.set('yearId', String(activeYear.id))
+
+        fetch(`/api/children?${params.toString()}`).then(r => r.json()).then(d => {
             setChildren(d)
-            if (d.length > 0) setSelectedChild(d[0].id)
+            if (!d.length) {
+                setRecords([])
+            }
+            setSelectedChild((prev) => (
+                d.some((child: Child) => child.id === prev) ? prev : (d[0]?.id ?? null)
+            ))
         })
-    }, [])
+    }, [activeYear?.id, selectedEnrollmentStatus])
 
     useEffect(() => {
         if (!selectedChild) return
@@ -82,6 +104,18 @@ export default function DevelopmentPage() {
         <div className="space-y-4 animate-fade-up">
             {/* Child selector — horizontal scroll */}
             <div className="flex items-center gap-3">
+                <select
+                    value={selectedEnrollmentStatus}
+                    onChange={e => setSelectedEnrollmentStatus(e.target.value as EnrollmentStatus | 'all')}
+                    className="px-3 py-1.5 rounded-lg text-sm input-field shrink-0"
+                >
+                    <option value="all">ทุกสถานะ</option>
+                    {ENROLLMENT_STATUSES.map(status => (
+                        <option key={status} value={status}>
+                            {enrollmentStatusLabels[status]}
+                        </option>
+                    ))}
+                </select>
                 <div className="flex gap-1.5 flex-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                     {children.map(c => (
                         <button
@@ -143,7 +177,8 @@ export default function DevelopmentPage() {
                     </button>
                     <button
                         onClick={() => { setForm(f => ({ ...f, childId: String(selectedChild ?? '') })); setShowForm(true) }}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0 btn-primary"
+                        disabled={!selectedChild}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0 btn-primary disabled:opacity-50"
                     >
                         + บันทึก
                     </button>

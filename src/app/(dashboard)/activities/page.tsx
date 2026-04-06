@@ -6,6 +6,12 @@ import Modal from '@/app/components/ui/Modal'
 import { CardGridSkeleton } from '@/app/components/ui/Skeleton'
 import { Smile, Meh, Frown, Thermometer, Utensils, Moon, FileText, Camera, Download } from 'lucide-react'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
+import { useChildcareStore } from '@/store/useStore'
+import {
+    EnrollmentStatus,
+    ENROLLMENT_STATUSES,
+    enrollmentStatusLabels,
+} from '@/lib/enrollmentStatus'
 
 interface Child { id: number; nickname: string; firstName: string; gender: string }
 interface Activity {
@@ -31,6 +37,7 @@ export default function ActivitiesPage() {
     const [children, setChildren] = useState<Child[]>([])
     const [activities, setActivities] = useState<Activity[]>([])
     const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const [selectedEnrollmentStatus, setSelectedEnrollmentStatus] = useState<EnrollmentStatus | 'all'>('active')
     const [showForm, setShowForm] = useState(false)
     const [saving, setSaving] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -43,6 +50,7 @@ export default function ActivitiesPage() {
         mood: 'happy',
         teacherNote: '',
     })
+    const { activeYear, fetchAcademicYears } = useChildcareStore()
 
     const fetchActivities = useCallback(async () => {
         setLoading(true)
@@ -55,11 +63,28 @@ export default function ActivitiesPage() {
     }, [date])
 
     useEffect(() => {
-        fetch('/api/children?lite=1').then(r => r.json()).then(d => {
+        if (!activeYear) {
+            void fetchAcademicYears()
+        }
+    }, [activeYear, fetchAcademicYears])
+
+    useEffect(() => {
+        const params = new URLSearchParams({ lite: '1', status: selectedEnrollmentStatus })
+        if (activeYear?.id) params.set('yearId', String(activeYear.id))
+
+        fetch(`/api/children?${params.toString()}`).then(r => r.json()).then(d => {
             setChildren(d)
-            if (d.length) setForm(f => ({ ...f, childId: String(d[0].id) }))
+            setForm(f => ({
+                ...f,
+                childId:
+                    d.some((child: Child) => String(child.id) === f.childId)
+                        ? f.childId
+                        : d.length
+                            ? String(d[0].id)
+                            : '',
+            }))
         })
-    }, [])
+    }, [activeYear?.id, selectedEnrollmentStatus])
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -79,12 +104,14 @@ export default function ActivitiesPage() {
     }
 
     const handleSubmit = async () => {
+        if (!activeYear) return
         setSaving(true)
         const res = await fetch('/api/activities', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...form, date,
+                academicYearId: activeYear.id,
                 childId: Number(form.childId),
                 sleepMinutes: form.sleepMinutes ? Number(form.sleepMinutes) : null,
             }),
@@ -109,6 +136,18 @@ export default function ActivitiesPage() {
                         onChange={e => setDate(e.target.value)}
                         className="px-3 py-1.5 rounded-lg text-sm input-field"
                     />
+                    <select
+                        value={selectedEnrollmentStatus}
+                        onChange={e => setSelectedEnrollmentStatus(e.target.value as EnrollmentStatus | 'all')}
+                        className="px-3 py-1.5 rounded-lg text-sm input-field"
+                    >
+                        <option value="all">ทุกสถานะ</option>
+                        {ENROLLMENT_STATUSES.map(status => (
+                            <option key={status} value={status}>
+                                {enrollmentStatusLabels[status]}
+                            </option>
+                        ))}
+                    </select>
                     <span className="text-xs" style={{ color: 'var(--muted)' }}>
                         บันทึกแล้ว {activities.length}/{children.length} คน
                     </span>
@@ -367,7 +406,7 @@ export default function ActivitiesPage() {
 
                 <div className="flex gap-3 mt-5">
                     <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm btn-secondary">ยกเลิก</button>
-                    <button onClick={handleSubmit} disabled={saving || !form.childId} className="flex-1 py-2.5 rounded-xl text-sm btn-primary">
+                    <button onClick={handleSubmit} disabled={saving || !form.childId || !activeYear} className="flex-1 py-2.5 rounded-xl text-sm btn-primary disabled:opacity-50">
                         {saving ? 'กำลังบันทึก...' : 'บันทึก'}
                     </button>
                 </div>

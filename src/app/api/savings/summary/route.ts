@@ -31,7 +31,7 @@ export async function GET() {
 
         const [enrollments, balances] = await Promise.all([
             prisma.childEnrollment.findMany({
-                where: { academicYearId: activeYear.id, status: { not: 'leave' } },
+                where: { academicYearId: activeYear.id, status: 'active' },
                 select: {
                     childId: true,
                     levelId: true,

@@ -2,24 +2,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { createChildRecord } from '@/lib/childRecords'
+import { normalizeEnrollmentStatus } from '@/lib/enrollmentStatus'
+import { getEffectiveAcademicYearId } from '@/lib/activeEnrollment'
 
 export const dynamic = 'force-dynamic'
 
-function generateCode(seq: number): string {
-  return `KD${String(seq).padStart(3, '0')}`
-}
-
 export async function GET(req: NextRequest) {
   const session = await getSession()
-  if (!session.isAuthenticated) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session.isAuthenticated) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { searchParams } = new URL(req.url)
   const yearId = searchParams.get('yearId')
   const lite = searchParams.get('lite') === '1'
+  const requestedStatus = searchParams.has('status')
+    ? normalizeEnrollmentStatus(searchParams.get('status'))
+    : lite
+      ? 'active'
+      : 'all'
+  const effectiveYearId =
+    requestedStatus !== 'all'
+      ? await getEffectiveAcademicYearId(prisma, yearId ? Number(yearId) : null)
+      : yearId
+        ? Number(yearId)
+        : null
 
-  const where = yearId
-    ? { enrollments: { some: { academicYearId: Number(yearId) } } }
-    : {}
+  const where = effectiveYearId
+    ? {
+        enrollments: {
+          some: {
+            academicYearId: effectiveYearId,
+            ...(requestedStatus !== 'all' && { status: requestedStatus }),
+          },
+        },
+      }
+    : requestedStatus !== 'all'
+      ? { id: -1 }
+      : {}
 
   if (lite) {
     const children = await prisma.child.findMany({
@@ -57,49 +78,71 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
-  if (!session.isAuthenticated) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session.isAuthenticated) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   try {
     const body = await req.json()
     const {
-      firstName, lastName, nickname, gender, dateOfBirth,
-      bloodType, disease, allergy,
-      parentName, parentPhone, parentPhone2, parentRelation, address,
-      academicYearId, levelId
+      firstName,
+      lastName,
+      nickname,
+      gender,
+      dateOfBirth,
+      bloodType,
+      disease,
+      allergy,
+      parentName,
+      parentPhone,
+      parentPhone2,
+      parentRelation,
+      address,
+      academicYearId,
+      levelId,
     } = body
 
-    if (!firstName || !lastName || !nickname || !gender || !dateOfBirth || !parentName || !parentPhone) {
-      return NextResponse.json({ message: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ' }, { status: 400 })
+    if (
+      !firstName ||
+      !lastName ||
+      !nickname ||
+      !gender ||
+      !dateOfBirth ||
+      !parentName ||
+      !parentPhone
+    ) {
+      return NextResponse.json(
+        { message: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ' },
+        { status: 400 }
+      )
     }
 
-    // Generate code
-    const count = await prisma.child.count()
-    const code = generateCode(count + 1)
-
-    const child = await prisma.child.create({
-      data: {
-        code,
-        firstName, lastName, nickname, gender,
-        dateOfBirth: new Date(dateOfBirth),
-        bloodType: bloodType || null,
-        disease: disease || null,
-        allergy: allergy || null,
-        parentName, parentPhone,
-        parentPhone2: parentPhone2 || null,
-        parentRelation, address: address || null,
-        enrollments: (academicYearId && levelId) ? {
-          create: { 
-            academicYearId: Number(academicYearId),
-            levelId: Number(levelId)
-          }
-        } : undefined,
-      },
-      include: { enrollments: true },
-    })
+    const child = await prisma.$transaction((tx) =>
+      createChildRecord(tx, {
+        firstName,
+        lastName,
+        nickname,
+        gender,
+        dateOfBirth,
+        bloodType,
+        disease,
+        allergy,
+        parentName,
+        parentPhone,
+        parentPhone2,
+        parentRelation,
+        address,
+        academicYearId: academicYearId ? Number(academicYearId) : null,
+        levelId: levelId ? Number(levelId) : null,
+      })
+    )
 
     return NextResponse.json(child, { status: 201 })
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ message: 'เกิดข้อผิดพลาดในการบันทึก' }, { status: 500 })
+    return NextResponse.json(
+      { message: 'เกิดข้อผิดพลาดในการบันทึก' },
+      { status: 500 }
+    )
   }
 }

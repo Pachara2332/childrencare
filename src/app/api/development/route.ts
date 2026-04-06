@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { ensureChildActiveForAcademicYear } from '@/lib/activeEnrollment'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -16,6 +17,12 @@ export async function POST(req: NextRequest) {
 
     if (!childId) {
       return NextResponse.json({ message: 'childId is required' }, { status: 400 })
+    }
+
+    const activeCheck = await ensureChildActiveForAcademicYear(prisma, Number(childId))
+
+    if (!activeCheck.ok) {
+      return NextResponse.json({ message: 'Child is not active in the current academic year' }, { status: 400 })
     }
 
     const development = await prisma.development.create({

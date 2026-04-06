@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { ensureChildActiveForAcademicYear } from '@/lib/activeEnrollment'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +15,7 @@ export async function GET(req: NextRequest) {
   const dateStr = searchParams.get('date') // YYYY-MM-DD
   const academicYearId = searchParams.get('academicYearId')
 
-  const whereClause: any = {}
+  const whereClause: Prisma.DailyActivityWhereInput = {}
   
   if (childId) {
     whereClause.childId = Number(childId)
@@ -59,6 +61,16 @@ export async function POST(req: NextRequest) {
 
     if (!childId || !academicYearId || !date) {
       return NextResponse.json({ message: 'childId, academicYearId, and date are required' }, { status: 400 })
+    }
+
+    const activeCheck = await ensureChildActiveForAcademicYear(
+      prisma,
+      Number(childId),
+      Number(academicYearId)
+    )
+
+    if (!activeCheck.ok) {
+      return NextResponse.json({ message: 'Child is not active in this academic year' }, { status: 400 })
     }
 
     const activityDate = new Date(`${date}T00:00:00.000Z`)

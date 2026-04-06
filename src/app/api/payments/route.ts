@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { ensureChildActiveForAcademicYear } from '@/lib/activeEnrollment'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +17,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status')
   const childId = searchParams.get('childId')
 
-  const whereClause: any = {}
+  const whereClause: Prisma.PaymentWhereInput = {}
   
   if (academicYearId) whereClause.academicYearId = Number(academicYearId)
   if (month) whereClause.month = Number(month)
@@ -54,6 +56,16 @@ export async function POST(req: NextRequest) {
 
     if (!childId || !academicYearId || !month || !year || !dueDate) {
       return NextResponse.json({ message: 'childId, academicYearId, month, year, and dueDate are required' }, { status: 400 })
+    }
+
+    const activeCheck = await ensureChildActiveForAcademicYear(
+      prisma,
+      Number(childId),
+      Number(academicYearId)
+    )
+
+    if (!activeCheck.ok) {
+      return NextResponse.json({ message: 'Child is not active in this academic year' }, { status: 400 })
     }
 
     // Check if duplicate exists

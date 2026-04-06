@@ -4,9 +4,16 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Skeleton } from '@/app/components/ui/Skeleton'
-import { Download, School, Search, Baby, Cake, User, Stethoscope, Loader2, CheckCircle2, PlusCircle, AlertCircle, Zap, Users, Copy, Sparkles, Eye, MapPin } from 'lucide-react'
+import { Download, School, Search, Baby, Cake, User, Stethoscope, Loader2, CheckCircle2, PlusCircle, AlertCircle, Zap, Users, Copy, Sparkles, Eye, MapPin, LogOut, GraduationCap, RotateCcw } from 'lucide-react'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
+import EnrollmentStatusDialog from '@/app/components/ui/EnrollmentStatusDialog'
 import { exportCSV, exportPDF } from '@/lib/exportUtils'
+import {
+    EnrollmentStatus,
+    enrollmentStatusLabels,
+    enrollmentStatusShortLabels,
+    getEnrollmentStatusTone,
+} from '@/lib/enrollmentStatus'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ClassLevel {
@@ -48,8 +55,11 @@ interface Enrollment {
     id: number
     childId: number
     status: string
+    statusDate: string | null
+    statusReason: string | null
     child: Child
     level: ClassLevel
+    academicYear: { id: number; name: string }
 }
 
 type MainTab = 'roster' | 'add' | 'import' | 'manage-levels'
@@ -80,6 +90,7 @@ export default function ChildrenPage() {
     const [years, setYears] = useState<AcademicYear[]>([])
     const [selectedYearId, setSelectedYearId] = useState<number | null>(null)
     const [selectedLevelId, setSelectedLevelId] = useState<number | 'all'>('all')
+    const [selectedStatus, setSelectedStatus] = useState<EnrollmentStatus | 'all'>('active')
     const [enrollments, setEnrollments] = useState<Enrollment[]>([])
     const [loading, setLoading] = useState(false)
     const [mainTab, setMainTab] = useState<MainTab>('roster')
@@ -99,28 +110,40 @@ export default function ChildrenPage() {
     const loadEnrollments = useCallback(async () => {
         if (!selectedYearId) return
         setLoading(true)
-        const params = new URLSearchParams({ yearId: String(selectedYearId) })
-        if (selectedLevelId !== 'all') params.set('levelId', String(selectedLevelId))
+        const params = new URLSearchParams({ yearId: String(selectedYearId), status: 'all' })
         const data = await fetch(`/api/enrollments?${params}`).then(r => r.json())
         setEnrollments(data)
         setLoading(false)
-    }, [selectedYearId, selectedLevelId])
+    }, [selectedYearId])
 
     useEffect(() => { loadEnrollments() }, [loadEnrollments])
 
     const activeYear = years.find(y => y.id === selectedYearId)
     const levels = activeYear?.classLevels ?? []
 
-    const filtered = useMemo(() => enrollments.filter(e =>
+    const statusFiltered = useMemo(() => (
+        selectedStatus === 'all'
+            ? enrollments
+            : enrollments.filter(e => e.status === selectedStatus)
+    ), [enrollments, selectedStatus])
+
+    const filtered = useMemo(() => statusFiltered.filter(e =>
+        (selectedLevelId === 'all' || e.level.id === selectedLevelId) &&
         `${e.child.nickname}${e.child.firstName}${e.child.lastName}${e.child.code}`
             .toLowerCase().includes(search.toLowerCase())
-    ), [enrollments, search])
+    ), [statusFiltered, selectedLevelId, search])
+
+    const statusCounts = useMemo(() => ({
+        active: enrollments.filter(e => e.status === 'active').length,
+        leave: enrollments.filter(e => e.status === 'leave').length,
+        graduated: enrollments.filter(e => e.status === 'graduated').length,
+    }), [enrollments])
 
     // Count per level
     const levelCounts = useMemo(() => levels.map(l => ({
         ...l,
-        count: enrollments.filter(e => e.level.id === l.id).length,
-    })), [levels, enrollments])
+        count: statusFiltered.filter(e => e.level.id === l.id).length,
+    })), [levels, statusFiltered])
 
     return (
         <div className="space-y-4 animate-fade-up">
@@ -183,7 +206,7 @@ export default function ChildrenPage() {
                                 className="text-2xl font-bold"
                                 style={{ color: selectedLevelId === 'all' ? 'white' : 'var(--text)' }}
                             >
-                                {enrollments.length}
+                                {statusFiltered.length}
                             </div>
                             <div
                                 className="text-xs mt-0.5"
@@ -239,6 +262,28 @@ export default function ChildrenPage() {
                         })}
                     </div>
 
+                    <div className="flex flex-wrap gap-2">
+                        {([
+                            ['all', `ทั้งหมด ${enrollments.length}`],
+                            ['active', `กำลังเรียน ${statusCounts.active}`],
+                            ['leave', `ย้ายออก ${statusCounts.leave}`],
+                            ['graduated', `จบแล้ว ${statusCounts.graduated}`],
+                        ] as [EnrollmentStatus | 'all', string][]).map(([status, label]) => (
+                            <button
+                                key={status}
+                                onClick={() => setSelectedStatus(status)}
+                                className="px-3 py-2 rounded-xl text-xs font-semibold"
+                                style={{
+                                    background: selectedStatus === status ? 'var(--forest)' : 'white',
+                                    color: selectedStatus === status ? 'white' : 'var(--muted)',
+                                    border: `1px solid ${selectedStatus === status ? 'var(--forest)' : 'var(--warm)'}`,
+                                }}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Search + Export */}
                     <div className="flex items-center gap-2">
                         <div className="relative flex-1">
@@ -252,13 +297,16 @@ export default function ChildrenPage() {
                         </div>
                         <button
                             onClick={() => {
-                                const headers = ['รหัส', 'ชื่อเล่น', 'ชื่อ-สกุล', 'อายุ', 'ชั้น', 'ผู้ปกครอง', 'เบอร์โทร', 'โรคประจำตัว']
+                                const headers = ['รหัส', 'ชื่อเล่น', 'ชื่อ-สกุล', 'อายุ', 'ชั้น', 'สถานะ', 'วันที่', 'เหตุผล', 'ผู้ปกครอง', 'เบอร์โทร']
                                 const rows = filtered.map(e => [
                                     e.child.code, e.child.nickname,
                                     `${e.child.firstName} ${e.child.lastName}`,
                                     calcAge(e.child.dateOfBirth).text,
-                                    e.level.name, e.child.parentName, e.child.parentPhone,
-                                    e.child.disease ?? '-',
+                                    e.level.name,
+                                    enrollmentStatusLabels[e.status as EnrollmentStatus],
+                                    e.statusDate ? new Date(e.statusDate).toLocaleDateString('th-TH') : '-',
+                                    e.statusReason ?? '-',
+                                    e.child.parentName, e.child.parentPhone,
                                 ])
                                 exportCSV(headers, rows, 'children-roster')
                             }}
@@ -269,17 +317,21 @@ export default function ChildrenPage() {
                         </button>
                         <button
                             onClick={() => {
-                                const headers = ['รหัส', 'ชื่อเล่น', 'ชื่อ-สกุล', 'อายุ', 'ชั้น', 'ผู้ปกครอง', 'เบอร์โทร', 'โรคประจำตัว']
+                                const headers = ['รหัส', 'ชื่อเล่น', 'ชื่อ-สกุล', 'อายุ', 'ชั้น', 'สถานะ', 'วันที่', 'เหตุผล', 'ผู้ปกครอง', 'เบอร์โทร']
                                 const rows = filtered.map(e => [
                                     e.child.code, e.child.nickname,
                                     `${e.child.firstName} ${e.child.lastName}`,
                                     calcAge(e.child.dateOfBirth).text,
-                                    e.level.name, e.child.parentName, e.child.parentPhone,
-                                    e.child.disease ?? '-',
+                                    e.level.name,
+                                    enrollmentStatusLabels[e.status as EnrollmentStatus],
+                                    e.statusDate ? new Date(e.statusDate).toLocaleDateString('th-TH') : '-',
+                                    e.statusReason ?? '-',
+                                    e.child.parentName, e.child.parentPhone,
                                 ])
                                 exportPDF('ทะเบียนนักเรียน', headers, rows, 'children-roster', [
                                     { label: 'ปีการศึกษา', value: activeYear?.name ?? '-' },
                                     { label: 'จำนวน', value: `${filtered.length} คน` },
+                                    { label: 'สถานะ', value: selectedStatus === 'all' ? 'ทุกสถานะ' : enrollmentStatusLabels[selectedStatus] },
                                 ])
                             }}
                             className="px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1 shrink-0"
@@ -339,6 +391,12 @@ function ChildGrid({
 }) {
     const [movingId, setMovingId] = useState<number | null>(null)
     const [targetLevel, setTargetLevel] = useState<Record<number, number>>({})
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+    const [statusAction, setStatusAction] = useState<EnrollmentStatus>('leave')
+    const [statusTarget, setStatusTarget] = useState<Enrollment | null>(null)
+    const [statusDate, setStatusDate] = useState(new Date().toISOString().split('T')[0])
+    const [statusReason, setStatusReason] = useState('')
+    const [statusSaving, setStatusSaving] = useState(false)
 
     const handleMove = async (childId: number, levelId: number) => {
         if (!yearId) return
@@ -349,6 +407,40 @@ function ChildGrid({
             body: JSON.stringify({ childId, academicYearId: yearId, levelId }),
         })
         setMovingId(null)
+        onRefresh()
+    }
+
+    const openStatusDialog = (enrollment: Enrollment, nextStatus: EnrollmentStatus) => {
+        setStatusTarget(enrollment)
+        setStatusAction(nextStatus)
+        setStatusDate(
+            nextStatus === 'active'
+                ? new Date().toISOString().split('T')[0]
+                : enrollment.statusDate?.split('T')[0] ?? new Date().toISOString().split('T')[0]
+        )
+        setStatusReason(nextStatus === 'active' ? '' : enrollment.statusReason ?? '')
+        setStatusDialogOpen(true)
+    }
+
+    const confirmStatusChange = async () => {
+        if (!statusTarget) return
+        setStatusSaving(true)
+        await fetch('/api/enrollments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                childId: statusTarget.childId,
+                academicYearId: statusTarget.academicYear.id,
+                levelId: statusTarget.level.id,
+                status: statusAction,
+                statusDate,
+                statusReason,
+            }),
+        })
+        setStatusSaving(false)
+        setStatusDialogOpen(false)
+        setStatusTarget(null)
+        setStatusReason('')
         onRefresh()
     }
 
@@ -438,6 +530,15 @@ function ChildGrid({
                                         {e.level.name}
                                     </span>
                                     <span
+                                        className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                        style={{
+                                            background: getEnrollmentStatusTone(e.status as EnrollmentStatus).bg,
+                                            color: getEnrollmentStatusTone(e.status as EnrollmentStatus).text,
+                                        }}
+                                    >
+                                        {enrollmentStatusShortLabels[e.status as EnrollmentStatus]}
+                                    </span>
+                                    <span
                                         className="text-xs font-mono px-2 py-0.5 rounded-lg"
                                         style={{ background: 'var(--cream)', color: 'var(--muted)' }}
                                     >
@@ -455,10 +556,20 @@ function ChildGrid({
                                         <Stethoscope size={14} /> {e.child.disease}
                                     </p>
                                 )}
+                                {e.statusDate && (
+                                    <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                        วันที่สถานะ {new Date(e.statusDate).toLocaleDateString('th-TH')}
+                                    </p>
+                                )}
+                                {e.statusReason && (
+                                    <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                        เหตุผล: {e.statusReason}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Move level */}
-                            {levels.length > 1 && (
+                            {e.status === 'active' && levels.length > 1 && (
                                 <div className="flex items-center gap-2 pt-3" style={{ borderTop: '1px solid var(--warm)' }}>
                                     <select
                                         value={targetLevel[e.child.id] ?? e.level.id}
@@ -483,10 +594,54 @@ function ChildGrid({
                                     </button>
                                 </div>
                             )}
+
+                            <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--warm)' }}>
+                                {e.status === 'active' ? (
+                                    <>
+                                        <button
+                                            onClick={() => openStatusDialog(e, 'leave')}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                                            style={{ background: '#FFF0ED', color: 'var(--coral)' }}
+                                        >
+                                            <LogOut size={14} /> ย้ายออก
+                                        </button>
+                                        <button
+                                            onClick={() => openStatusDialog(e, 'graduated')}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                                            style={{ background: 'oklch(0.95 0.04 70)', color: 'oklch(0.42 0.08 70)' }}
+                                        >
+                                            <GraduationCap size={14} /> จบการศึกษา
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={() => openStatusDialog(e, 'active')}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                                        style={{ background: 'oklch(0.95 0.04 150)', color: 'var(--leaf)' }}
+                                    >
+                                        <RotateCcw size={14} /> เปิดกลับเป็นกำลังเรียน
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )
             })}
+            <EnrollmentStatusDialog
+                open={statusDialogOpen}
+                action={statusAction}
+                loading={statusSaving}
+                date={statusDate}
+                reason={statusReason}
+                onClose={() => {
+                    if (statusSaving) return
+                    setStatusDialogOpen(false)
+                    setStatusTarget(null)
+                }}
+                onDateChange={setStatusDate}
+                onReasonChange={setStatusReason}
+                onConfirm={confirmStatusChange}
+            />
         </div>
     )
 }

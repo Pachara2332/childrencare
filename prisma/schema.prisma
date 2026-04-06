@@ -19,6 +19,7 @@ model AcademicYear {
     createdAt DateTime @default(now())
 
     enrollments   ChildEnrollment[]
+    applications  EnrollmentApplication[]
     activities    DailyActivity[]
     announcements Announcement[]
     savings       Saving[]
@@ -39,8 +40,9 @@ model ClassLevel {
     color          String @default("#52B788") // สีประจำชั้น
     order          Int    @default(0) // ลำดับแสดงผล
 
-    academicYear AcademicYear      @relation(fields: [academicYearId], references: [id])
+    academicYear AcademicYear           @relation(fields: [academicYearId], references: [id])
     enrollments  ChildEnrollment[]
+    applications EnrollmentApplication[]
 
     @@unique([academicYearId, code])
     @@index([academicYearId, order])
@@ -87,6 +89,8 @@ model ChildEnrollment {
     levelId        Int // ← ระดับชั้น
     enrolledAt     DateTime @default(now())
     status         String   @default("active") // "active"|"leave"|"graduated"
+    statusDate     DateTime?
+    statusReason   String?
     note           String?
 
     child        Child        @relation(fields: [childId], references: [id])
@@ -97,6 +101,43 @@ model ChildEnrollment {
     @@index([academicYearId, status])
     @@index([academicYearId, levelId, status])
     @@index([levelId])
+}
+
+model EnrollmentApplication {
+    id             Int      @id @default(autoincrement())
+    referenceNo    String   @unique @default(cuid())
+    academicYearId Int
+    levelId        Int
+    status         String   @default("pending") // "pending" | "approved" | "rejected"
+
+    firstName   String
+    lastName    String
+    nickname    String
+    gender      String
+    dateOfBirth DateTime
+    bloodType   String?
+    disease     String?
+    allergy     String?
+
+    parentName     String
+    parentPhone    String
+    parentPhone2   String?
+    parentRelation String
+    address        String?
+    note           String?
+
+    reviewNote      String?
+    reviewedAt      DateTime?
+    approvedChildId Int?
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+    level        ClassLevel   @relation(fields: [levelId], references: [id])
+
+    @@index([status, createdAt])
+    @@index([academicYearId, status])
+    @@index([levelId, status])
 }
 
 // ─── เช็กชื่อ ─────────────────────────────────────────────────────────────────

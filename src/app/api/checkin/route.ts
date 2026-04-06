@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { ensureChildActiveForAcademicYear } from '@/lib/activeEnrollment'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,12 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.checkIn.findUnique({
       where: { childId_date: { childId: Number(childId), date } },
     })
+
+    const activeCheck = await ensureChildActiveForAcademicYear(prisma, Number(childId))
+
+    if (!activeCheck.ok && !(type === 'out' && existing?.checkInAt)) {
+      return NextResponse.json({ message: 'นักเรียนไม่ได้อยู่ในสถานะกำลังเรียน' }, { status: 400 })
+    }
 
     if (type === 'absent') {
       if (existing?.checkInAt) {

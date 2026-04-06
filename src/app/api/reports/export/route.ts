@@ -1,120 +1,156 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import {
+  EnrollmentStatus,
+  enrollmentStatusLabels,
+  normalizeEnrollmentStatus,
+} from '@/lib/enrollmentStatus'
+import { getStudentReport } from '@/lib/studentReports'
+
+function formatStatusDate(value: string | null) {
+  if (!value) return '-'
+  return new Date(value).toLocaleDateString('th-TH')
+}
+
+function reportTitle(status: EnrollmentStatus | 'all') {
+  return status === 'all'
+    ? 'รายงานนักเรียนทั้งหมด'
+    : `รายงานนักเรียนสถานะ ${enrollmentStatusLabels[status]}`
+}
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
-  if (!session.isAuthenticated) return new NextResponse('Unauthorized', { status: 401 })
+  if (!session.isAuthenticated) {
+    return new NextResponse('Unauthorized', { status: 401 })
+  }
 
   const { searchParams } = new URL(req.url)
-  const monthStr = searchParams.get('month')
-  const yearStr = searchParams.get('year')
+  const month = Number(searchParams.get('month') ?? new Date().getMonth() + 1)
+  const year = Number(searchParams.get('year') ?? new Date().getFullYear())
   const type = searchParams.get('type')
+  const status = normalizeEnrollmentStatus(searchParams.get('status'))
 
   if (!type) {
     return new NextResponse('Type missing', { status: 400 })
   }
 
   try {
-    const academicYear = await prisma.academicYear.findFirst({
-        where: { isActive: true }
-    });
+    const report = await getStudentReport({ month, year, status })
 
-    const enrollments = academicYear ? await prisma.childEnrollment.findMany({
-        where: { academicYearId: academicYear.id, status: 'active' },
-        include: { child: true }
-    }) : [];
-
-    const children = enrollments.map(e => e.child);
-
-    if (type === 'csv') {
-      let csvContent = "\uFEFFรหัส,ชื่อ-นามสกุล,ชื่อเล่น,วันเกิด,ผู้ปกครอง,เบอร์ติดต่อ,โรคประจำตัว\n";
-      
-      children.forEach(c => {
-         const row = [
-             c.code,
-             `${c.firstName} ${c.lastName}`,
-             c.nickname,
-             c.dateOfBirth.toISOString().split('T')[0],
-             c.parentName,
-             c.parentPhone,
-             c.disease || '-'
-         ].map(v => `"${v}"`).join(',');
-         csvContent += row + "\n";
-      });
-
-      return new NextResponse(csvContent, {
-          headers: {
-             'Content-Type': 'text/csv; charset=utf-8',
-             'Content-Disposition': `attachment; filename="report_${yearStr}_${monthStr}.csv"`
-          }
-      });
-    } else if (type === 'pdf') {
-       // Since no PDF library is setup, returning HTML that prints itself.
-       // The UI already saves it as .html based on the code check.
-       const htmlContent = `
-       <html>
-       <head>
-          <meta charset="utf-8">
-          <title>Report - ${monthStr}/${yearStr}</title>
-          <style>
-             body { font-family: sans-serif; padding: 20px; color: #333; }
-             h2 { text-align: center; margin-bottom: 5px; }
-             .center-info { text-align: center; margin-bottom: 20px; font-size: 14px; }
-             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-             th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-             th { background-color: #f8f9fa; }
-             .header-info { display: flex; justify-content: space-between; margin-bottom: 15px; }
-          </style>
-       </head>
-       <body onload="setTimeout(() => window.print(), 500)">
-          <h2>รายงานประจำเดือน</h2>
-          <div class="center-info">
-             เดือน ${monthStr} ปี ${yearStr} | ปีการศึกษา ${academicYear?.name || '-'}
-          </div>
-          
-          <div class="header-info">
-             <div><strong>จำนวนเด็กทั้งหมด:</strong> ${children.length} คน</div>
-             <div><strong>วันที่พิมพ์:</strong> ${new Date().toLocaleDateString('th-TH')}</div>
-          </div>
-
-          <table>
-            <thead>
-               <tr>
-                  <th>รหัส</th>
-                  <th>ชื่อ-นามสกุล</th>
-                  <th>ชื่อเล่น</th>
-                  <th>ผู้ปกครอง</th>
-                  <th>เบอร์ติดต่อ</th>
-               </tr>
-            </thead>
-            <tbody>
-               ${children.map(c => `
-                  <tr>
-                     <td>${c.code}</td>
-                     <td>${c.firstName} ${c.lastName}</td>
-                     <td>${c.nickname}</td>
-                     <td>${c.parentName}</td>
-                     <td>${c.parentPhone}</td>
-                  </tr>
-               `).join('')}
-               ${children.length === 0 ? '<tr><td colspan="5" style="text-align: center">ไม่พบข้อมูล</td></tr>' : ''}
-            </tbody>
-          </table>
-       </body>
-       </html>
-       `;
-       return new NextResponse(htmlContent, {
-          headers: {
-             'Content-Type': 'text/html; charset=utf-8',
-             'Content-Disposition': `attachment; filename="report_${yearStr}_${monthStr}.html"`
-          }
-      });
+    if (!report) {
+      return new NextResponse('No active academic year', { status: 400 })
     }
 
-    return new NextResponse('Invalid type', { status: 400 });
+    const safeStatus = status === 'all' ? 'all' : status
+
+    if (type === 'csv') {
+      let csvContent =
+        '\uFEFFรหัส,ชื่อ-นามสกุล,ชื่อเล่น,ระดับชั้น,สถานะ,วันที่สถานะ,เหตุผล,ผู้ปกครอง,เบอร์โทร,อัตราเข้าเรียน,โรคประจำตัว\n'
+
+      report.childrenList.forEach((child) => {
+        const row = [
+          child.code,
+          child.name,
+          child.nickname,
+          `${child.levelName} (${child.levelCode})`,
+          child.statusLabel,
+          formatStatusDate(child.statusDate),
+          child.statusReason || '-',
+          child.parent,
+          child.phone,
+          `${child.attendanceRate}%`,
+          child.disease || '-',
+        ]
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(',')
+        csvContent += `${row}\n`
+      })
+
+      return new NextResponse(csvContent, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="student-report-${safeStatus}-${year}-${String(month).padStart(2, '0')}.csv"`,
+        },
+      })
+    }
+
+    if (type === 'pdf') {
+      const htmlContent = `
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${reportTitle(status)}</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; color: #24322b; }
+          h1 { text-align: center; margin-bottom: 4px; }
+          .sub { text-align: center; margin-bottom: 20px; color: #5f6f66; }
+          .summary { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+          .card { border: 1px solid #dfe7de; border-radius: 12px; padding: 12px 14px; min-width: 140px; }
+          .card strong { display: block; font-size: 18px; margin-bottom: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #dfe7de; padding: 10px; text-align: left; vertical-align: top; }
+          th { background: #f5f7f4; }
+        </style>
+      </head>
+      <body onload="setTimeout(() => window.print(), 500)">
+        <h1>${reportTitle(status)}</h1>
+        <div class="sub">${report.centerName} | ${report.location} | ปีการศึกษา ${report.academicYear}</div>
+        <div class="summary">
+          <div class="card"><strong>${report.totalChildren}</strong>นักเรียนตามตัวกรอง</div>
+          <div class="card"><strong>${report.statusSummary.active}</strong>กำลังเรียน</div>
+          <div class="card"><strong>${report.statusSummary.leave}</strong>ย้ายออก</div>
+          <div class="card"><strong>${report.statusSummary.graduated}</strong>จบการศึกษา</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>รหัส</th>
+              <th>ชื่อ</th>
+              <th>ชั้น</th>
+              <th>สถานะ</th>
+              <th>วันที่สถานะ</th>
+              <th>เหตุผล</th>
+              <th>ผู้ปกครอง</th>
+              <th>เบอร์โทร</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${report.childrenList
+              .map(
+                (child) => `
+              <tr>
+                <td>${child.code}</td>
+                <td>${child.nickname}<br />${child.name}</td>
+                <td>${child.levelName} (${child.levelCode})</td>
+                <td>${child.statusLabel}</td>
+                <td>${formatStatusDate(child.statusDate)}</td>
+                <td>${child.statusReason || '-'}</td>
+                <td>${child.parent}</td>
+                <td>${child.phone}</td>
+              </tr>`
+              )
+              .join('')}
+            ${
+              report.childrenList.length === 0
+                ? '<tr><td colspan="8" style="text-align:center">ไม่พบข้อมูล</td></tr>'
+                : ''
+            }
+          </tbody>
+        </table>
+      </body>
+      </html>`
+
+      return new NextResponse(htmlContent, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': `attachment; filename="student-report-${safeStatus}-${year}-${String(month).padStart(2, '0')}.html"`,
+        },
+      })
+    }
+
+    return new NextResponse('Invalid type', { status: 400 })
   } catch (error) {
-    console.error(error);
-    return new NextResponse('Export failed', { status: 500 });
+    console.error(error)
+    return new NextResponse('Export failed', { status: 500 })
   }
 }

@@ -80,14 +80,19 @@ export default function ChildProfilePage() {
 
     useEffect(() => {
         Promise.all([
-            fetch(`/api/children/${id}`).then(r => r.json()),
-            fetch(`/api/children/${id}/developments`).then(r => r.json()),
-            fetch(`/api/children/${id}/checkins?limit=30`).then(r => r.json()),
+            fetch(`/api/children/${id}`).then(r => r.ok ? r.json() : null),
+            fetch(`/api/children/${id}/developments`).then(r => r.ok ? r.json() : []),
+            fetch(`/api/children/${id}/checkins?limit=30`).then(r => r.ok ? r.json() : []),
         ]).then(([c, d, ci]) => {
             setChild(c)
-            setEditForm(c)
+            if (c) setEditForm(c)
             setDevelopments(d)
             setCheckIns(ci)
+            setLoading(false)
+        }).catch(() => {
+            setChild(null)
+            setDevelopments([])
+            setCheckIns([])
             setLoading(false)
         })
     }, [id])

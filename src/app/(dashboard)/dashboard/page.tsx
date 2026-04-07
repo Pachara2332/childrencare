@@ -5,103 +5,108 @@ import DashboardClient from './DashboardClient'
 import DashboardBadge from './DashboardBadge'
 
 async function getDashboardData() {
-    const activeYear = await prisma.academicYear.findFirst({
-        where: { isActive: true },
-    })
+    try {
+        const activeYear = await prisma.academicYear.findFirst({
+            where: { isActive: true },
+        })
 
-    if (!activeYear) return null
+        if (!activeYear) return null
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
 
-    const [totalChildren, presentToday, announcements, totalSavings, children, checkInsTodayArray] =
-        await Promise.all([
-            prisma.childEnrollment.count({
-                where: { academicYearId: activeYear.id, status: 'active' },
-            }),
-            prisma.checkIn.count({
-                where: {
-                    date: today,
-                    checkInAt: { not: null },
-                    checkOutAt: null,
-                },
-            }),
-            prisma.announcement.findMany({
-                where: {
-                    academicYearId: activeYear.id,
-                    OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
-                },
-                orderBy: [{ isUrgent: 'desc' }, { publishedAt: 'desc' }],
-                take: 5,
-            }),
-            prisma.saving.aggregate({
-                where: { academicYearId: activeYear.id },
-                _sum: { amount: true },
-            }),
-            prisma.childEnrollment.findMany({
-                where: {
-                    academicYearId: activeYear.id,
-                    status: 'active',
-                },
-                select: {
-                    child: {
-                        select: {
-                            id: true,
-                            nickname: true,
-                            firstName: true,
-                            lastName: true,
-                            gender: true,
+        const [totalChildren, presentToday, announcements, totalSavings, children, checkInsTodayArray] =
+            await Promise.all([
+                prisma.childEnrollment.count({
+                    where: { academicYearId: activeYear.id, status: 'active' },
+                }),
+                prisma.checkIn.count({
+                    where: {
+                        date: today,
+                        checkInAt: { not: null },
+                        checkOutAt: null,
+                    },
+                }),
+                prisma.announcement.findMany({
+                    where: {
+                        academicYearId: activeYear.id,
+                        OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
+                    },
+                    orderBy: [{ isUrgent: 'desc' }, { publishedAt: 'desc' }],
+                    take: 5,
+                }),
+                prisma.saving.aggregate({
+                    where: { academicYearId: activeYear.id },
+                    _sum: { amount: true },
+                }),
+                prisma.childEnrollment.findMany({
+                    where: {
+                        academicYearId: activeYear.id,
+                        status: 'active',
+                    },
+                    select: {
+                        child: {
+                            select: {
+                                id: true,
+                                nickname: true,
+                                firstName: true,
+                                lastName: true,
+                                gender: true,
+                            },
+                        },
+                        level: {
+                            select: {
+                                code: true,
+                                color: true,
+                            },
                         },
                     },
-                    level: {
-                        select: {
-                            code: true,
-                            color: true,
+                    orderBy: { child: { nickname: 'asc' } },
+                }),
+                prisma.checkIn.findMany({
+                    where: { date: today },
+                    select: {
+                        id: true,
+                        childId: true,
+                        checkInAt: true,
+                        checkOutAt: true,
+                        child: {
+                            select: {
+                                nickname: true,
+                                gender: true,
+                            },
                         },
                     },
-                },
-                orderBy: { child: { nickname: 'asc' } },
-            }),
-            prisma.checkIn.findMany({
-                where: { date: today },
-                select: {
-                    id: true,
-                    childId: true,
-                    checkInAt: true,
-                    checkOutAt: true,
-                    child: {
-                        select: {
-                            nickname: true,
-                            gender: true,
-                        },
-                    },
-                },
-                orderBy: { checkInAt: 'desc' },
-            }),
-        ])
+                    orderBy: { checkInAt: 'desc' },
+                }),
+            ])
 
-    const savingsTotal = totalSavings._sum.amount ?? 0
-    const allChildren = children.map((enrollment) => ({
-        ...enrollment.child,
-        enrollments: [{ level: enrollment.level }],
-    }))
-    const allCheckInsToday = checkInsTodayArray.map((record) => ({
-        childId: record.childId,
-        checkInAt: record.checkInAt,
-        checkOutAt: record.checkOutAt,
-    }))
-    const checkInsToday = checkInsTodayArray.slice(0, 8)
+        const savingsTotal = totalSavings._sum.amount ?? 0
+        const allChildren = children.map((enrollment) => ({
+            ...enrollment.child,
+            enrollments: [{ level: enrollment.level }],
+        }))
+        const allCheckInsToday = checkInsTodayArray.map((record) => ({
+            childId: record.childId,
+            checkInAt: record.checkInAt,
+            checkOutAt: record.checkOutAt,
+        }))
+        const checkInsToday = checkInsTodayArray.slice(0, 8)
 
-    return {
-        activeYear,
-        totalChildren,
-        presentToday,
-        absentToday: totalChildren - presentToday,
-        announcements,
-        totalSavings: savingsTotal,
-        checkInsToday,
-        allChildren,
-        allCheckInsToday,
+        return {
+            activeYear,
+            totalChildren,
+            presentToday,
+            absentToday: totalChildren - presentToday,
+            announcements,
+            totalSavings: savingsTotal,
+            checkInsToday,
+            allChildren,
+            allCheckInsToday,
+        }
+    } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+        return null
     }
 }
 

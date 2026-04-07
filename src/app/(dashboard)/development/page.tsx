@@ -54,21 +54,26 @@ export default function DevelopmentPage() {
         const params = new URLSearchParams({ lite: '1', status: selectedEnrollmentStatus })
         if (activeYear?.id) params.set('yearId', String(activeYear.id))
 
-        fetch(`/api/children?${params.toString()}`).then(r => r.json()).then(d => {
-            setChildren(d)
-            if (!d.length) {
-                setRecords([])
-            }
-            setSelectedChild((prev) => (
-                d.some((child: Child) => child.id === prev) ? prev : (d[0]?.id ?? null)
-            ))
-        })
+        fetch(`/api/children?${params.toString()}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(d => {
+                setChildren(d)
+                if (!d.length) {
+                    setRecords([])
+                }
+                setSelectedChild((prev) => (
+                    d.some((child: Child) => child.id === prev) ? prev : (d[0]?.id ?? null)
+                ))
+            })
+            .catch(() => { setChildren([]); setRecords([]) })
     }, [activeYear?.id, selectedEnrollmentStatus])
 
     useEffect(() => {
         if (!selectedChild) return
         fetch(`/api/children/${selectedChild}/developments`)
-            .then(r => r.json()).then(setRecords)
+            .then(r => r.ok ? r.json() : [])
+            .then(setRecords)
+            .catch(() => setRecords([]))
     }, [selectedChild])
 
     const handleSubmit = async () => {

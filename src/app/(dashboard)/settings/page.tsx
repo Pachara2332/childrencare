@@ -30,10 +30,16 @@ export default function SettingsPage() {
     const [savingLocation, setSavingLocation] = useState(false)
 
     useEffect(() => {
-        fetch('/api/academic-years').then(r => r.json()).then(setYears)
-        fetch('/api/config/location').then(r => r.json()).then(data => {
-            if (data) setLocationConfig({ lat: data.lat || 0, lng: data.lng || 0, radius: data.radius || 100, enabled: data.enabled || false })
-        })
+        fetch('/api/academic-years')
+            .then(r => r.ok ? r.json() : [])
+            .then(setYears)
+            .catch(() => setYears([]))
+        fetch('/api/config/location')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data) setLocationConfig({ lat: data.lat || 0, lng: data.lng || 0, radius: data.radius || 100, enabled: data.enabled || false })
+            })
+            .catch(() => { /* silently fail — use defaults */ })
     }, [])
 
     const handleChangePin = async () => {

@@ -66,7 +66,13 @@ export default function PaymentsPage() {
             if (activeYear?.id) params.set('academicYearId', String(activeYear.id))
 
             const res = await fetch(`/api/payments?${params.toString()}`)
-            setPayments(await res.json())
+            if (res.ok) {
+                setPayments(await res.json())
+            } else {
+                setPayments([])
+            }
+        } catch {
+            setPayments([])
         } finally {
             setLoading(false)
         }
@@ -82,18 +88,21 @@ export default function PaymentsPage() {
         const params = new URLSearchParams({ lite: '1', status: selectedEnrollmentStatus })
         if (activeYear?.id) params.set('yearId', String(activeYear.id))
 
-        fetch(`/api/children?${params.toString()}`).then(r => r.json()).then(d => {
-            setChildren(d)
-            setAddForm(f => ({
-                ...f,
-                childId:
-                    d.some((child: Child) => String(child.id) === f.childId)
-                        ? f.childId
-                        : d.length
-                            ? String(d[0].id)
-                            : '',
-            }))
-        })
+        fetch(`/api/children?${params.toString()}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(d => {
+                setChildren(d)
+                setAddForm(f => ({
+                    ...f,
+                    childId:
+                        d.some((child: Child) => String(child.id) === f.childId)
+                            ? f.childId
+                            : d.length
+                                ? String(d[0].id)
+                                : '',
+                }))
+            })
+            .catch(() => setChildren([]))
     }, [activeYear?.id, selectedEnrollmentStatus])
 
     useEffect(() => {

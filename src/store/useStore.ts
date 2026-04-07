@@ -51,10 +51,15 @@ export const useChildcareStore = create<ChildcareState>((set, get) => ({
     set((state) => ({ loading: { ...state.loading, stats: true } }))
     try {
       const res = await fetch('/api/checkin/today-count')
-      const data = await res.json()
-      set({ presentCount: data.count })
+      if (res.ok) {
+        const data = await res.json()
+        set({ presentCount: data.count })
+      } else {
+        set({ presentCount: 0 })
+      }
     } catch (error) {
       console.error('Failed to fetch today count:', error)
+      set({ presentCount: 0 })
     } finally {
       set((state) => ({ loading: { ...state.loading, stats: false } }))
     }
@@ -64,13 +69,18 @@ export const useChildcareStore = create<ChildcareState>((set, get) => ({
     set((state) => ({ loading: { ...state.loading, years: true } }))
     try {
       const res = await fetch('/api/academic-years')
-      const data = await res.json()
-      set({ 
-        academicYears: data,
-        activeYear: data.find((y: AcademicYear) => y.isActive) || null
-      })
+      if (res.ok) {
+        const data = await res.json()
+        set({ 
+          academicYears: data,
+          activeYear: data.find((y: AcademicYear) => y.isActive) || null
+        })
+      } else {
+        set({ academicYears: [], activeYear: null })
+      }
     } catch (error) {
       console.error('Failed to fetch academic years:', error)
+      set({ academicYears: [], activeYear: null })
     } finally {
       set((state) => ({ loading: { ...state.loading, years: false } }))
     }

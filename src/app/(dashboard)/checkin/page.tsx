@@ -87,9 +87,20 @@ export default function CheckInPage() {
 
     const fetchRecords = useCallback(async () => {
         setLoading(true)
-        const res = await fetch(`/api/checkin?date=${selectedDate}`)
-        setRecords(await res.json())
-        setLoading(false)
+        try {
+            const res = await fetch(`/api/checkin?date=${selectedDate}`)
+            if (res.ok) {
+                setRecords(await res.json())
+            } else {
+                console.error('Failed to fetch checkin records:', res.status)
+                setRecords([])
+            }
+        } catch (error) {
+            console.error('Failed to fetch checkin records:', error)
+            setRecords([])
+        } finally {
+            setLoading(false)
+        }
     }, [selectedDate])
 
     useEffect(() => {
@@ -101,7 +112,18 @@ export default function CheckInPage() {
     }, [fetchRecords, fetchPresentCount, showToast])
 
     const fetchChildren = useCallback(async () => {
-        setChildren(await fetch('/api/children?lite=1').then(r => r.json()))
+        try {
+            const res = await fetch('/api/children?lite=1')
+            if (res.ok) {
+                setChildren(await res.json())
+            } else {
+                console.error('Failed to fetch children:', res.status)
+                setChildren([])
+            }
+        } catch (error) {
+            console.error('Failed to fetch children:', error)
+            setChildren([])
+        }
     }, [])
 
     const fetchEnrollments = useCallback(async () => {

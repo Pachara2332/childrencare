@@ -31,7 +31,10 @@ export default function AnnouncementsPage() {
     const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
     const fetch_ = () => {
-        fetch('/api/announcements').then(r => r.json()).then(d => { setItems(d); setLoading(false) })
+        fetch('/api/announcements')
+            .then(r => r.ok ? r.json() : [])
+            .then(d => { setItems(d); setLoading(false) })
+            .catch(() => { setItems([]); setLoading(false) })
     }
     useEffect(() => { fetch_() }, [])
 

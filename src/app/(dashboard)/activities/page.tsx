@@ -56,7 +56,13 @@ export default function ActivitiesPage() {
         setLoading(true)
         try {
             const res = await fetch(`/api/activities?date=${date}`)
-            setActivities(await res.json())
+            if (res.ok) {
+                setActivities(await res.json())
+            } else {
+                setActivities([])
+            }
+        } catch {
+            setActivities([])
         } finally {
             setLoading(false)
         }
@@ -72,18 +78,21 @@ export default function ActivitiesPage() {
         const params = new URLSearchParams({ lite: '1', status: selectedEnrollmentStatus })
         if (activeYear?.id) params.set('yearId', String(activeYear.id))
 
-        fetch(`/api/children?${params.toString()}`).then(r => r.json()).then(d => {
-            setChildren(d)
-            setForm(f => ({
-                ...f,
-                childId:
-                    d.some((child: Child) => String(child.id) === f.childId)
-                        ? f.childId
-                        : d.length
-                            ? String(d[0].id)
-                            : '',
-            }))
-        })
+        fetch(`/api/children?${params.toString()}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(d => {
+                setChildren(d)
+                setForm(f => ({
+                    ...f,
+                    childId:
+                        d.some((child: Child) => String(child.id) === f.childId)
+                            ? f.childId
+                            : d.length
+                                ? String(d[0].id)
+                                : '',
+                }))
+            })
+            .catch(() => setChildren([]))
     }, [activeYear?.id, selectedEnrollmentStatus])
 
     useEffect(() => {

@@ -57,6 +57,7 @@ function ParentCheckIn() {
     const [pendingSiblings, setPendingSiblings] = useState<Sibling[]>([])
     const [checkoutChild, setCheckoutChild] = useState<{ id: number, nickname: string } | null>(null)
     const [absentChild, setAbsentChild] = useState<{ id: number, nickname: string } | null>(null)
+    const [locationConfig, setLocationConfig] = useState<{ lat: number, lng: number, radius: number, enabled: boolean } | null>(null)
     const searchRef = useRef<HTMLInputElement>(null)
     const recordMap = useMemo(
         () => new Map(records.map((record) => [record.childId, record])),
@@ -91,14 +92,55 @@ function ParentCheckIn() {
         Promise.all([
             fetch('/api/children?lite=1').then(r => r.json()),
             fetch(`/api/checkin/public?date=${date}`).then(r => r.json()),
-        ]).then(([c, r]) => {
+            fetch('/api/config/location').then(r => r.json()),
+        ]).then(([c, r, loc]) => {
             setChildren(c)
             setRecords(r)
+            if (loc) setLocationConfig(loc)
             setLoading(false)
         })
     }, [date])
 
     const handleAction = async (childId: number, type: 'in' | 'out' | 'absent', pickupName?: string, pickupRelation?: string, note?: string) => {
+        if (locationConfig?.enabled && (type === 'in' || type === 'out')) {
+            if (!navigator.geolocation) {
+                showToast('เบราว์เซอร์ของคุณไม่รองรับระบบ GPS', false)
+                return
+            }
+
+            setProcessing(childId)
+            try {
+                const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+                })
+                
+                const userLat = pos.coords.latitude
+                const userLng = pos.coords.longitude
+                
+                const R = 6371e3; // metres
+                const φ1 = locationConfig.lat * Math.PI/180; 
+                const φ2 = userLat * Math.PI/180;
+                const Δφ = (userLat-locationConfig.lat) * Math.PI/180;
+                const Δλ = (userLng-locationConfig.lng) * Math.PI/180;
+
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                          Math.cos(φ1) * Math.cos(φ2) *
+                          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const d = R * c; 
+
+                if (d > locationConfig.radius) {
+                    showToast(`คุณกดเช็กชื่อนอกสถานที่ศูนย์ (ห่าง ${Math.round(d)} เมตร) ระบบไม่อนุญาต`, false)
+                    setProcessing(null)
+                    return
+                }
+            } catch (err) {
+                showToast('กรุณาอนุญาต Location (พิกัด GPS) ก่อนกดเช็กชื่อ', false)
+                setProcessing(null)
+                return
+            }
+        }
+
         setProcessing(childId)
         const payload: CheckInPayload = { childId, type, date, method: 'qr' }
         if (pickupName) payload.pickupName = pickupName

@@ -2,7 +2,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarDays, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CalendarDays, CheckCircle2, AlertCircle, MapPin } from 'lucide-react'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
 interface AcademicYear {
     id: number; year: string; name: string
@@ -10,7 +11,7 @@ interface AcademicYear {
 }
 
 export default function SettingsPage() {
-    const [tab, setTab] = useState<'pin' | 'year'>('year')
+    const [tab, setTab] = useState<'pin' | 'year' | 'location'>('year')
 
     // PIN
     const [currentPin, setCurrentPin] = useState('')
@@ -23,9 +24,16 @@ export default function SettingsPage() {
     const [years, setYears] = useState<AcademicYear[]>([])
     const [form, setForm] = useState({ year: '', name: '', startDate: '', endDate: '', isActive: false })
     const [savingYear, setSavingYear] = useState(false)
+    const [confirmActiveYearId, setConfirmActiveYearId] = useState<number | null>(null)
+    const [activatingYearId, setActivatingYearId] = useState<number | null>(null)
+    const [locationConfig, setLocationConfig] = useState({ lat: 0, lng: 0, radius: 100, enabled: false })
+    const [savingLocation, setSavingLocation] = useState(false)
 
     useEffect(() => {
         fetch('/api/academic-years').then(r => r.json()).then(setYears)
+        fetch('/api/config/location').then(r => r.json()).then(data => {
+            if (data) setLocationConfig({ lat: data.lat || 0, lng: data.lng || 0, radius: data.radius || 100, enabled: data.enabled || false })
+        })
     }, [])
 
     const handleChangePin = async () => {
@@ -59,13 +67,17 @@ export default function SettingsPage() {
     }
 
     const handleSetActive = async (id: number) => {
+        setActivatingYearId(id)
         await fetch(`/api/academic-years/${id}/activate`, { method: 'POST' })
         setYears(prev => prev.map(y => ({ ...y, isActive: y.id === id })))
+        setActivatingYearId(null)
+        setConfirmActiveYearId(null)
     }
 
     const tabs = [
-        { id: 'year' as const, label: 'ปีการศึกษา' },
-        { id: 'pin' as const, label: 'เปลี่ยน PIN' },
+        { id: 'year' as const, label: 'ปีการศึกษา', icon: <CalendarDays size={18} /> },
+        { id: 'location' as const, label: 'พิกัด (GPS)', icon: <MapPin size={18} /> },
+        { id: 'pin' as const, label: 'รหัสลับ (PIN)', icon: <AlertCircle size={18} /> },
     ]
 
     return (
@@ -149,13 +161,82 @@ export default function SettingsPage() {
                                         </p>
                                     </div>
                                     {!y.isActive && (
-                                        <button onClick={() => handleSetActive(y.id)} className="text-xs px-3 py-1.5 rounded-lg btn-secondary font-semibold" style={{ color: 'var(--leaf)' }}>
+                                        <button onClick={() => setConfirmActiveYearId(y.id)} className="text-xs px-3 py-1.5 rounded-lg btn-secondary font-semibold" style={{ color: 'var(--leaf)' }}>
                                             ตั้งเป็นปัจจุบัน
                                         </button>
                                     )}
                                 </div>
                             ))
                         )}
+                    </div>
+                </div>
+            )}
+
+            {tab === 'location' && (
+                <div className="card rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#DBE9F4', color: 'var(--sky)' }}>
+                            <MapPin size={20} />
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-lg" style={{ color: 'var(--text)' }}>พิกัดที่ตั้งศูนย์พัฒนาเด็กเล็ก (GPS)</h2>
+                            <p className="text-sm" style={{ color: 'var(--muted)' }}>กำหนดพื้นที่เพื่อป้องกันผู้ปกครองเช็กชื่อนอกสถานที่</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 max-w-md">
+                        <label className="flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all hover:bg-gray-50" style={{ borderColor: locationConfig.enabled ? 'var(--leaf)' : 'var(--warm)' }}>
+                            <input type="checkbox" className="w-5 h-5 rounded text-green-600 focus:ring-green-500" checked={locationConfig.enabled} onChange={e => setLocationConfig(prev => ({ ...prev, enabled: e.target.checked }))} />
+                            <div>
+                                <p className="font-bold text-sm" style={{ color: 'var(--text)' }}>เปิดใช้งานการป้องกันด้วยตำแหน่ง (GPS)</p>
+                                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>ถ้าเปิด ผู้ปกครองต้องอยู่ใกล้จุดนี้ถึงจะกดเช็กชื่อได้</p>
+                            </div>
+                        </label>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>ละติจูด (Latitude)</label>
+                                <input type="number" step="any" value={locationConfig.lat || ''} onChange={e => setLocationConfig(prev => ({ ...prev, lat: parseFloat(e.target.value) }))} className="w-full px-3 py-2.5 rounded-xl border text-sm input-field" placeholder="17.447697" disabled={!locationConfig.enabled} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>ลองจิจูด (Longitude)</label>
+                                <input type="number" step="any" value={locationConfig.lng || ''} onChange={e => setLocationConfig(prev => ({ ...prev, lng: parseFloat(e.target.value) }))} className="w-full px-3 py-2.5 rounded-xl border text-sm input-field" placeholder="104.470998" disabled={!locationConfig.enabled} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>รัศมีที่อนุญาต (เมตร)</label>
+                            <input type="number" value={locationConfig.radius} onChange={e => setLocationConfig(prev => ({ ...prev, radius: parseInt(e.target.value) || 100 }))} className="w-full px-3 py-2.5 rounded-xl border text-sm input-field" disabled={!locationConfig.enabled} />
+                            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>แนะนำ: 50-100 เมตร เพื่อเผื่อพื้นที่ลานจอดรถและหน้าประตู</p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                            <button
+                                onClick={() => {
+                                    if (!navigator.geolocation) { alert('เบราว์เซอร์ไม่รองรับ GPS'); return }
+                                    navigator.geolocation.getCurrentPosition(
+                                        pos => setLocationConfig(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude })),
+                                        err => alert('ดึงตำแหน่งไม่ได้ กรุณาอนุญาต Location Permission ในเบราว์เซอร์')
+                                    )
+                                }}
+                                disabled={!locationConfig.enabled}
+                                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                ดึงด้วย GPS เครื่องนี้ 📍
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setSavingLocation(true)
+                                    await fetch('/api/config/location', { method: 'POST', body: JSON.stringify(locationConfig) })
+                                    setSavingLocation(false)
+                                    alert('บันทึกการตั้งค่าพิกัดเรียบร้อยแล้ว')
+                                }}
+                                disabled={savingLocation || !locationConfig.enabled && false}
+                                className="px-5 py-2.5 rounded-xl text-sm font-semibold btn-primary flex-1 disabled:opacity-50"
+                            >
+                                {savingLocation ? 'กำลังบันทึก...' : 'บันทึกพิกัด'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -197,6 +278,17 @@ export default function SettingsPage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={confirmActiveYearId !== null}
+                onClose={() => setConfirmActiveYearId(null)}
+                onConfirm={() => confirmActiveYearId && handleSetActive(confirmActiveYearId)}
+                title="ตั้งเป็นปีการศึกษาปัจจุบัน?"
+                description="ระบบทั้งหมดจะถูกสลับไปใช้ปีการศึกษานี้ ข้อมูลนักเรียนและการเงินของปีนี้จะถูกแสดงแทน ยืนยันข้อมูลถูกต้องใช่หรือไม่?"
+                confirmLabel="ยืนยันตั้งค่า"
+                variant="info"
+                loading={activatingYearId !== null}
+            />
         </div>
     )
 }

@@ -14,6 +14,7 @@ import {
   UserRoundPlus,
   XCircle,
 } from 'lucide-react'
+import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
 interface ClassLevel {
   id: number
@@ -74,7 +75,10 @@ function formatDate(date: string | null) {
 function ageText(dateOfBirth: string) {
   const birth = new Date(dateOfBirth)
   const now = new Date()
-  let years = now.getFullYear() - birth.getFullYear()
+  let birthYear = birth.getFullYear()
+  if (birthYear > 2400) birthYear -= 543
+  
+  let years = now.getFullYear() - birthYear
   let months = now.getMonth() - birth.getMonth()
   if (months < 0) {
     years -= 1
@@ -126,6 +130,7 @@ export default function ApplicationsPage() {
   const [reviewNote, setReviewNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null)
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
 
   const loadYears = useCallback(async () => {
@@ -255,6 +260,7 @@ export default function ApplicationsPage() {
       })
     } finally {
       setActing(false)
+      setConfirmAction(null)
     }
   }
 
@@ -611,21 +617,21 @@ export default function ApplicationsPage() {
               {selectedApplication.status === 'pending' ? (
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <button
-                    onClick={() => handleAction('approve')}
+                    onClick={() => setConfirmAction('approve')}
                     disabled={acting}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 transition-all hover:brightness-110"
                     style={{ background: 'var(--leaf)' }}
                   >
-                    {acting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                    <CheckCircle2 size={16} />
                     อนุมัติและสร้างทะเบียนนักเรียน
                   </button>
                   <button
-                    onClick={() => handleAction('reject')}
+                    onClick={() => setConfirmAction('reject')}
                     disabled={acting}
-                    className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold disabled:opacity-50 transition-all hover:bg-rose-50"
                     style={{ background: '#FFF0ED', color: 'var(--coral)', border: '1px solid #F6C2B2' }}
                   >
-                    {acting ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                    <XCircle size={16} />
                     ปฏิเสธใบสมัคร
                   </button>
                 </div>
@@ -650,6 +656,21 @@ export default function ApplicationsPage() {
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && handleAction(confirmAction)}
+        title={confirmAction === 'approve' ? 'ยืนยันอนุมัติใบสมัคร' : 'ยืนยันปฏิเสธใบสมัคร'}
+        description={
+          confirmAction === 'approve'
+            ? `คุณกำลังจะอนุมัติ "${selectedApplication?.firstName} ${selectedApplication?.lastName}" ระบบจะสร้างทะเบียนนักเรียนใหม่และดำเนินการตามขั้นตอน`
+            : `คุณกำลังจะปฏิเสธใบสมัครของ "${selectedApplication?.firstName} ${selectedApplication?.lastName}" ใบสมัครนี้จะถูกบันทึกการถูกปฏิเสธ`
+        }
+        confirmLabel={confirmAction === 'approve' ? 'อนุมัติใบสมัคร' : 'ปฏิเสธใบสมัคร'}
+        variant={confirmAction === 'approve' ? 'success' : 'danger'}
+        loading={acting}
+      />
     </div>
   )
 }

@@ -16,6 +16,7 @@ import {
   Printer,
 } from 'lucide-react'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
+import { getApplicationDocumentLabel } from '@/lib/applicationDocuments'
 
 interface ClassLevel {
   id: number
@@ -54,6 +55,15 @@ interface EnrollmentApplication {
   reviewedAt: string | null
   approvedChildId: number | null
   createdAt: string
+  documents: {
+    id: number
+    type: string
+    fileName: string
+    mimeType: string
+    fileSize: number
+    url: string
+    createdAt: string
+  }[]
   academicYear: {
     id: number
     name: string
@@ -86,6 +96,14 @@ function ageText(dateOfBirth: string) {
     months += 12
   }
   return `${years} ปี ${months} เดือน`
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} KB`
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function statusLabel(status: FilterStatus | EnrollmentApplication['status']) {
@@ -587,6 +605,46 @@ export default function ApplicationsPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="rounded-[1.5rem] p-5" style={{ background: 'var(--cream)' }}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+                    เอกสารแนบ
+                  </p>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>
+                    {selectedApplication.documents.length} ไฟล์
+                  </span>
+                </div>
+
+                {selectedApplication.documents.length === 0 ? (
+                  <p className="mt-4 text-sm" style={{ color: 'var(--muted)' }}>
+                    ยังไม่มีเอกสารแนบ
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {selectedApplication.documents.map((document) => (
+                      <a
+                        key={document.id}
+                        href={document.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition-all hover:brightness-[0.98]"
+                        style={{ background: 'white', border: '1px solid var(--warm)' }}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                            {document.fileName}
+                          </p>
+                          <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                            {getApplicationDocumentLabel(document.type)} • {formatFileSize(document.fileSize)}
+                          </p>
+                        </div>
+                        <ExternalLink size={16} style={{ color: 'var(--sage)' }} />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="rounded-[1.5rem] p-5" style={{ background: 'white', border: '1px solid var(--warm)' }}>

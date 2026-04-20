@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { createChildRecord, findDuplicateChild } from '@/lib/childRecords'
 import { enrollmentApplicationActionSchema } from '@/lib/enrollmentApplications'
+import { APPLICATION_DOCUMENTS } from '@/lib/applicationDocuments'
 
 const applicationInclude = {
   academicYear: {
@@ -21,6 +22,9 @@ const applicationInclude = {
       name: true,
       color: true,
     },
+  },
+  documents: {
+    orderBy: [{ createdAt: 'asc' }],
   },
 } satisfies Prisma.EnrollmentApplicationInclude
 
@@ -91,6 +95,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const result = await prisma.$transaction(async (tx) => {
       const application = await tx.enrollmentApplication.findUnique({
         where: { id: applicationId },
+        include: {
+          documents: true,
+        },
       })
 
       if (!application) {
@@ -129,6 +136,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         academicYearId: application.academicYearId,
         levelId: application.levelId,
       })
+
+      if (application.documents.length > 0) {
+        await tx.childDocument.createMany({
+          data: application.documents.map((document) => ({
+            childId: child.id,
+            type:
+              APPLICATION_DOCUMENTS.find((item) => item.type === document.type)?.childDocumentType ??
+              'other',
+            url: document.url,
+          })),
+        })
+      }
 
       const updatedApplication = await tx.enrollmentApplication.update({
         where: { id: applicationId },

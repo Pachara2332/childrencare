@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Baby, CheckCircle2, ClipboardCheck, Clock3, FilePlus2, HeartHandshake, Loader2, School, Send } from 'lucide-react'
+import { ArrowLeft, Baby, CheckCircle2, ClipboardCheck, Clock3, FilePlus2, HeartHandshake, Loader2, Paperclip, School, Send, Upload, X } from 'lucide-react'
+import { APPLICATION_DOCUMENTS, APPLICATION_DOCUMENT_ACCEPT, getApplicationDocumentLabel, type ApplicationDocumentType } from '@/lib/applicationDocuments'
 
 interface ClassLevel {
   id: number
@@ -40,6 +41,13 @@ interface FormState {
   address: string
   note: string
 }
+
+type UploadState = Record<ApplicationDocumentType, File[]>
+
+const initialUploads = APPLICATION_DOCUMENTS.reduce<UploadState>((result, item) => {
+  result[item.type] = []
+  return result
+}, {} as UploadState)
 
 const initialForm: FormState = {
   academicYearId: '',
@@ -83,9 +91,18 @@ function inputClassName() {
   return 'input-field w-full rounded-2xl px-4 py-3 text-sm'
 }
 
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} KB`
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default function ApplyPage() {
   const [years, setYears] = useState<AcademicYear[]>([])
   const [form, setForm] = useState<FormState>(initialForm)
+  const [uploads, setUploads] = useState<UploadState>(initialUploads)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -148,20 +165,45 @@ export default function ApplyPage() {
       setError('')
     }
 
+  const setFiles = (type: ApplicationDocumentType, fileList: FileList | null) => {
+    const config = APPLICATION_DOCUMENTS.find((item) => item.type === type)
+    if (!config) return
+
+    const files = Array.from(fileList ?? []).slice(0, config.maxFiles)
+    setUploads((current) => ({
+      ...current,
+      [type]: files,
+    }))
+    setError('')
+  }
+
+  const removeFile = (type: ApplicationDocumentType, index: number) => {
+    setUploads((current) => ({
+      ...current,
+      [type]: current[type].filter((_, fileIndex) => fileIndex !== index),
+    }))
+  }
+
   const submitForm = async () => {
     setError('')
     setSuccess(null)
     setSubmitting(true)
 
     try {
+      const formData = new FormData()
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value)
+      })
+
+      APPLICATION_DOCUMENTS.forEach((document) => {
+        uploads[document.type].forEach((file) => {
+          formData.append(`documents.${document.type}`, file)
+        })
+      })
+
       const response = await fetch('/api/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          academicYearId: Number(form.academicYearId),
-          levelId: Number(form.levelId),
-        }),
+        body: formData,
       })
 
       const data = await response.json()
@@ -176,12 +218,17 @@ export default function ApplyPage() {
         academicYearId: current.academicYearId,
         levelId: current.levelId,
       }))
+      setUploads(initialUploads)
     } catch {
       setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const missingRequiredUpload = APPLICATION_DOCUMENTS.some(
+    (document) => document.required && uploads[document.type].length === 0
+  )
 
   const isSubmitDisabled =
     submitting ||
@@ -192,7 +239,8 @@ export default function ApplyPage() {
     !form.nickname ||
     !form.dateOfBirth ||
     !form.parentName ||
-    !form.parentPhone
+    !form.parentPhone ||
+    missingRequiredUpload
 
   return (
     <div
@@ -678,6 +726,105 @@ export default function ApplyPage() {
                       placeholder="เช่น ต้องการให้ติดต่อช่วงเวลาใด หรือข้อมูลสำคัญเพิ่มเติม"
                     />
                   </label>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl"
+                    style={{ background: 'var(--cream)', color: 'var(--leaf)' }}
+                  >
+                    <Paperclip size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>
+                      เอกสารประกอบการสมัคร
+                    </h3>
+                    <p className="text-sm" style={{ color: 'var(--muted)' }}>
+                      รองรับไฟล์รูปภาพและ PDF สำหรับเอกสารของผู้ปกครองและนักเรียน
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  {APPLICATION_DOCUMENTS.map((document) => (
+                    <div
+                      key={document.type}
+                      className="rounded-[1.6rem] p-4"
+                      style={{ background: 'var(--cream)', border: '1px solid var(--warm)' }}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+                            {document.label}
+                          </p>
+                          <p className="mt-1 text-xs leading-6" style={{ color: 'var(--muted)' }}>
+                            {document.description}
+                          </p>
+                        </div>
+                        <div
+                          className="rounded-full px-3 py-1 text-xs font-semibold"
+                          style={{
+                            background: uploads[document.type].length > 0 ? 'oklch(0.95 0.04 150)' : 'white',
+                            color: uploads[document.type].length > 0 ? 'var(--leaf)' : 'var(--muted)',
+                            border: '1px solid var(--warm)',
+                          }}
+                        >
+                          {uploads[document.type].length}/{document.maxFiles} ไฟล์
+                        </div>
+                      </div>
+
+                      <label
+                        className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-4 text-sm font-semibold transition-all"
+                        style={{ borderColor: 'var(--warm)', color: 'var(--sage)', background: 'white' }}
+                      >
+                        <Upload size={16} />
+                        เลือกไฟล์
+                        <input
+                          type="file"
+                          accept={APPLICATION_DOCUMENT_ACCEPT}
+                          multiple={document.maxFiles > 1}
+                          className="hidden"
+                          onChange={(event) => setFiles(document.type, event.target.files)}
+                        />
+                      </label>
+
+                      {uploads[document.type].length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {uploads[document.type].map((file, index) => (
+                            <div
+                              key={`${document.type}-${file.name}-${index}`}
+                              className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3"
+                              style={{ border: '1px solid var(--warm)' }}
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                                  {file.name}
+                                </p>
+                                <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                                  {formatFileSize(file.size)}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(document.type, index)}
+                                className="rounded-full p-2"
+                                style={{ background: 'var(--cream)', color: 'var(--coral)' }}
+                                aria-label={`ลบไฟล์ ${file.name}`}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs" style={{ color: 'var(--muted)' }}>
+                          ยังไม่ได้เลือกไฟล์ {getApplicationDocumentLabel(document.type)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

@@ -138,10 +138,26 @@ model EnrollmentApplication {
 
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
   level        ClassLevel   @relation(fields: [levelId], references: [id])
+  documents    EnrollmentApplicationDocument[]
 
   @@index([status, createdAt])
   @@index([academicYearId, status])
   @@index([levelId, status])
+}
+
+model EnrollmentApplicationDocument {
+  id            Int      @id @default(autoincrement())
+  applicationId Int
+  type          String
+  fileName      String
+  mimeType      String
+  fileSize      Int
+  url           String   @db.Text
+  createdAt     DateTime @default(now())
+
+  application EnrollmentApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, type])
 }
 
 // ─── เช็กชื่อ ─────────────────────────────────────────────────────────────────

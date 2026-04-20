@@ -18,6 +18,7 @@ const ChildGrid = dynamic(() => import('./components/ChildGrid'), {
 const AddChildForm = dynamic(() => import('./components/AddChildForm'))
 const ImportJSON = dynamic(() => import('./components/ImportJSON'))
 const ManageLevels = dynamic(() => import('./components/ManageLevels'))
+const GraduatedChildren = dynamic(() => import('./components/GraduatedChildren'))
 
 const fetcher = (url: string) => fetch(url).then(res => {
     if (!res.ok) throw new Error(`API error: ${res.status}`)
@@ -117,22 +118,23 @@ export default function ChildrenPage() {
                 </div>
 
                 <div className="md:ml-auto flex flex-wrap gap-2">
-                    {(['roster', 'add', 'import', 'manage-levels'] as MainTab[]).map(t => (
+                    {(['roster', 'add', 'import', 'manage-levels', 'graduated'] as MainTab[]).map(t => (
                         <button
                             key={t}
                             onClick={() => setMainTab(t)}
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{
-                                background: mainTab === t ? 'var(--leaf)' : 'white',
-                                color: mainTab === t ? 'white' : 'var(--muted)',
-                                border: `1px solid ${mainTab === t ? 'var(--leaf)' : 'var(--warm)'}`,
+                                background: mainTab === t ? (t === 'graduated' ? 'var(--coral)' : 'var(--leaf)') : 'white',
+                                color: mainTab === t ? 'white' : (t === 'graduated' ? 'var(--coral)' : 'var(--muted)'),
+                                border: `1px solid ${mainTab === t ? (t === 'graduated' ? 'var(--coral)' : 'var(--leaf)') : 'var(--warm)'}`,
                                 transition: 'all 0.15s var(--ease-out-quart)',
                             }}
                         >
                             {t === 'roster' ? 'ทะเบียนนักเรียน'
                                 : t === 'add' ? 'เพิ่มเด็ก'
                                     : t === 'import' ? 'นำเข้า JSON'
-                                        : 'จัดการระดับชั้น'}
+                                        : t === 'manage-levels' ? 'จัดการระดับชั้น'
+                                            : 'ลบข้อมูลเด็กที่จบ'}
                         </button>
                     ))}
                 </div>
@@ -308,6 +310,10 @@ export default function ChildrenPage() {
                     levels={levels}
                     onRefresh={mutateYears}
                 />
+            )}
+
+            {mainTab === 'graduated' && (
+                <GraduatedChildren onRefreshMain={mutateEnrollments} />
             )}
         </div>
     )

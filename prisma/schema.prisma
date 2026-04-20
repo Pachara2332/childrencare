@@ -1,284 +1,322 @@
 // prisma/schema.prisma
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── ปีการศึกษา ───────────────────────────────────────────────────────────────
 model AcademicYear {
-    id        Int      @id @default(autoincrement())
-    year      String   @unique // "2567", "2568"
-    name      String // "ปีการศึกษา 2567"
-    startDate DateTime
-    endDate   DateTime
-    isActive  Boolean  @default(false)
-    createdAt DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  year      String   @unique // "2567", "2568"
+  name      String // "ปีการศึกษา 2567"
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-    enrollments   ChildEnrollment[]
-    applications  EnrollmentApplication[]
-    activities    DailyActivity[]
-    announcements Announcement[]
-    savings       Saving[]
-    classLevels   ClassLevel[]
-    payments      Payment[]
+  enrollments   ChildEnrollment[]
+  applications  EnrollmentApplication[]
+  activities    DailyActivity[]
+  announcements Announcement[]
+  savings       Saving[]
+  classLevels   ClassLevel[]
+  payments      Payment[]
+  LeaveRequest  LeaveRequest[]
 
-    @@index([isActive])
+  @@index([isActive])
 }
 
 // ─── ระดับชั้น (เตรียมอนุบาล / อนุบาล 1 / อนุบาล 2 ...) ─────────────────────
 model ClassLevel {
-    id             Int    @id @default(autoincrement())
-    academicYearId Int
-    code           String // "KG0" | "KG1" | "KG2" | "KG3"
-    name           String // "เตรียมอนุบาล" | "อนุบาล 1" ...
-    minAgeMonths   Int // อายุขั้นต่ำ (เดือน)  KG0=24, KG1=36
-    maxAgeMonths   Int // อายุสูงสุด (เดือน)   KG0=35, KG1=47
-    color          String @default("#52B788") // สีประจำชั้น
-    order          Int    @default(0) // ลำดับแสดงผล
+  id             Int    @id @default(autoincrement())
+  academicYearId Int
+  code           String // "KG0" | "KG1" | "KG2" | "KG3"
+  name           String // "เตรียมอนุบาล" | "อนุบาล 1" ...
+  minAgeMonths   Int // อายุขั้นต่ำ (เดือน)  KG0=24, KG1=36
+  maxAgeMonths   Int // อายุสูงสุด (เดือน)   KG0=35, KG1=47
+  color          String @default("#52B788") // สีประจำชั้น
+  order          Int    @default(0) // ลำดับแสดงผล
 
-    academicYear AcademicYear           @relation(fields: [academicYearId], references: [id])
-    enrollments  ChildEnrollment[]
-    applications EnrollmentApplication[]
+  academicYear AcademicYear            @relation(fields: [academicYearId], references: [id])
+  enrollments  ChildEnrollment[]
+  applications EnrollmentApplication[]
 
-    @@unique([academicYearId, code])
-    @@index([academicYearId, order])
+  @@unique([academicYearId, code])
+  @@index([academicYearId, order])
 }
 
 // ─── เด็ก ─────────────────────────────────────────────────────────────────────
 model Child {
-    id          Int      @id @default(autoincrement())
-    code        String   @unique // "KD001"
-    firstName   String
-    lastName    String
-    nickname    String
-    gender      String // "male" | "female"
-    dateOfBirth DateTime
-    bloodType   String?
-    disease     String?
-    allergy     String?
+  id          Int      @id @default(autoincrement())
+  code        String   @unique // "KD001"
+  firstName   String
+  lastName    String
+  nickname    String
+  gender      String // "male" | "female"
+  dateOfBirth DateTime
+  bloodType   String?
+  disease     String?
+  allergy     String?
 
-    parentName     String
-    parentPhone    String
-    parentPhone2   String?
-    parentRelation String // "father"|"mother"|"guardian"
-    guardianPhone  String? // used to group siblings — same phone = same family
-    address        String?
+  parentName     String
+  parentPhone    String
+  parentPhone2   String?
+  parentRelation String // "father"|"mother"|"guardian"
+  guardianPhone  String? // used to group siblings — same phone = same family
+  address        String?
 
-    qrToken   String   @unique @default(cuid())
-    photoUrl  String?
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  qrToken    String   @unique @default(cuid())
+  photoUrl   String?
+  lineUserId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-    enrollments  ChildEnrollment[]
-    checkIns     CheckIn[]
-    developments Development[]
-    activities   DailyActivity[]
-    savings      Saving[]
-    payments     Payment[]
+  enrollments   ChildEnrollment[]
+  checkIns      CheckIn[]
+  developments  Development[]
+  activities    DailyActivity[]
+  savings       Saving[]
+  payments      Payment[]
+  LeaveRequest  LeaveRequest[]
+  ChildDocument ChildDocument[]
 }
 
 // ─── การลงทะเบียนเด็กในแต่ละปี + ระดับชั้น ────────────────────────────────────
 model ChildEnrollment {
-    id             Int      @id @default(autoincrement())
-    childId        Int
-    academicYearId Int
-    levelId        Int // ← ระดับชั้น
-    enrolledAt     DateTime @default(now())
-    status         String   @default("active") // "active"|"leave"|"graduated"
-    statusDate     DateTime?
-    statusReason   String?
-    note           String?
+  id             Int       @id @default(autoincrement())
+  childId        Int
+  academicYearId Int
+  levelId        Int // ← ระดับชั้น
+  enrolledAt     DateTime  @default(now())
+  status         String    @default("active") // "active"|"leave"|"graduated"
+  statusDate     DateTime?
+  statusReason   String?
+  note           String?
 
-    child        Child        @relation(fields: [childId], references: [id])
-    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
-    level        ClassLevel   @relation(fields: [levelId], references: [id])
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  level        ClassLevel   @relation(fields: [levelId], references: [id])
 
-    @@unique([childId, academicYearId])
-    @@index([academicYearId, status])
-    @@index([academicYearId, levelId, status])
-    @@index([levelId])
+  @@unique([childId, academicYearId])
+  @@index([academicYearId, status])
+  @@index([academicYearId, levelId, status])
+  @@index([levelId])
 }
 
 model EnrollmentApplication {
-    id             Int      @id @default(autoincrement())
-    referenceNo    String   @unique @default(cuid())
-    academicYearId Int
-    levelId        Int
-    status         String   @default("pending") // "pending" | "approved" | "rejected"
+  id             Int    @id @default(autoincrement())
+  referenceNo    String @unique @default(cuid())
+  academicYearId Int
+  levelId        Int
+  status         String @default("pending") // "pending" | "approved" | "rejected"
 
-    firstName   String
-    lastName    String
-    nickname    String
-    gender      String
-    dateOfBirth DateTime
-    bloodType   String?
-    disease     String?
-    allergy     String?
+  firstName   String
+  lastName    String
+  nickname    String
+  gender      String
+  dateOfBirth DateTime
+  bloodType   String?
+  disease     String?
+  allergy     String?
 
-    parentName     String
-    parentPhone    String
-    parentPhone2   String?
-    parentRelation String
-    address        String?
-    note           String?
+  parentName     String
+  parentPhone    String
+  parentPhone2   String?
+  parentRelation String
+  address        String?
+  note           String?
 
-    reviewNote      String?
-    reviewedAt      DateTime?
-    approvedChildId Int?
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
+  reviewNote      String?
+  reviewedAt      DateTime?
+  approvedChildId Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
-    level        ClassLevel   @relation(fields: [levelId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  level        ClassLevel   @relation(fields: [levelId], references: [id])
 
-    @@index([status, createdAt])
-    @@index([academicYearId, status])
-    @@index([levelId, status])
+  @@index([status, createdAt])
+  @@index([academicYearId, status])
+  @@index([levelId, status])
 }
 
 // ─── เช็กชื่อ ─────────────────────────────────────────────────────────────────
 model CheckIn {
-    id         Int       @id @default(autoincrement())
-    childId    Int
-    date       DateTime  @db.Date
-    checkInAt  DateTime?
-    checkOutAt DateTime?
-    note       String?
-    method     String    @default("manual") // "qr"|"manual"
-    pickupName     String?  // ชื่อผู้มารับ
-    pickupRelation String?  // ความสัมพันธ์: แม่/พ่อ/ปู่/ย่า/ตา/ยาย/พี่เลี้ยง/อื่นๆ
-    isAbsent   Boolean   @default(false)
-    absenceReason String? // ลาป่วย/ลากิจ/เหตุผลอื่นๆ
-    createdAt  DateTime  @default(now())
+  id             Int       @id @default(autoincrement())
+  childId        Int
+  date           DateTime  @db.Date
+  checkInAt      DateTime?
+  checkOutAt     DateTime?
+  note           String?
+  method         String    @default("manual") // "qr"|"manual"
+  pickupName     String? // ชื่อผู้มารับ
+  pickupRelation String? // ความสัมพันธ์: แม่/พ่อ/ปู่/ย่า/ตา/ยาย/พี่เลี้ยง/อื่นๆ
+  isAbsent       Boolean   @default(false)
+  absenceReason  String? // ลาป่วย/ลากิจ/เหตุผลอื่นๆ
+  createdAt      DateTime  @default(now())
 
-    child Child @relation(fields: [childId], references: [id])
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-    @@unique([childId, date])
-    @@index([date])
+  @@unique([childId, date])
+  @@index([date])
 }
 
 // ─── พัฒนาการ ─────────────────────────────────────────────────────────────────
 model Development {
-    id         Int      @id @default(autoincrement())
-    childId    Int
-    recordedAt DateTime @default(now())
-    weight     Float?
-    height     Float?
+  id         Int      @id @default(autoincrement())
+  childId    Int
+  recordedAt DateTime @default(now())
+  weight     Float?
+  height     Float?
 
-    scoreLanguage  Int?
-    scorePhysical  Int?
-    scoreIntellect Int?
-    scoreEmotional Int?
-    scoreSocial    Int?
+  scoreLanguage  Int?
+  scorePhysical  Int?
+  scoreIntellect Int?
+  scoreEmotional Int?
+  scoreSocial    Int?
 
-    note       String?
-    recordedBy String  @default("teacher")
+  note       String?
+  recordedBy String  @default("teacher")
 
-    child Child @relation(fields: [childId], references: [id])
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-    @@index([childId, recordedAt])
+  @@index([childId, recordedAt])
 }
 
 // ─── กิจกรรมประจำวัน ──────────────────────────────────────────────────────────
 model DailyActivity {
-    id             Int      @id @default(autoincrement())
-    childId        Int
-    academicYearId Int
-    date           DateTime @db.Date
+  id             Int      @id @default(autoincrement())
+  childId        Int
+  academicYearId Int
+  date           DateTime @db.Date
 
-    meals          String?
-    mealsNote      String?
-    sleepMinutes   Int?
-    sleepNote      String?
-    activities     String[]
-    activitiesNote String?
-    mood           String?
-    teacherNote    String?
-    photoUrls      String[] @default([])
+  meals          String?
+  mealsNote      String?
+  sleepMinutes   Int?
+  sleepNote      String?
+  activities     String[]
+  activitiesNote String?
+  mood           String?
+  teacherNote    String?
+  photoUrls      String[] @default([])
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    child        Child        @relation(fields: [childId], references: [id])
-    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 
-    @@unique([childId, date])
-    @@index([academicYearId, date])
+  @@unique([childId, date])
+  @@index([academicYearId, date])
 }
 
 // ─── ประกาศ ───────────────────────────────────────────────────────────────────
 model Announcement {
-    id             Int       @id @default(autoincrement())
-    academicYearId Int
-    title          String
-    content        String
-    type           String    @default("general")
-    isUrgent       Boolean   @default(false)
-    publishedAt    DateTime  @default(now())
-    expiresAt      DateTime?
-    createdAt      DateTime  @default(now())
+  id             Int       @id @default(autoincrement())
+  academicYearId Int
+  title          String
+  content        String
+  type           String    @default("general")
+  isUrgent       Boolean   @default(false)
+  publishedAt    DateTime  @default(now())
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
 
-    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 
-    @@index([academicYearId, publishedAt])
-    @@index([expiresAt])
+  @@index([academicYearId, publishedAt])
+  @@index([expiresAt])
 }
 
 // ─── เงินออม ──────────────────────────────────────────────────────────────────
 model Saving {
-    id             Int      @id @default(autoincrement())
-    childId        Int
-    academicYearId Int
-    date           DateTime @db.Date
-    amount         Float    // positive = deposit, negative = withdraw
-    type           String   // "deposit" | "withdraw" | "payout"
-    note           String?
-    recordedBy     String   @default("teacher")
-    createdAt      DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  childId        Int
+  academicYearId Int
+  date           DateTime @db.Date
+  amount         Float // positive = deposit, negative = withdraw
+  type           String // "deposit" | "withdraw" | "payout"
+  note           String?
+  recordedBy     String   @default("teacher")
+  createdAt      DateTime @default(now())
 
-    child        Child        @relation(fields: [childId], references: [id])
-    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 
-    @@index([academicYearId, childId])
-    @@index([academicYearId, type])
-    @@index([childId, academicYearId, createdAt])
+  @@index([academicYearId, childId])
+  @@index([academicYearId, type])
+  @@index([childId, academicYearId, createdAt])
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 model AppConfig {
-    id    Int    @id @default(autoincrement())
-    key   String @unique
-    value Json
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value Json
 }
 
 // ─── การชำระเงิน (ค่าอาหารและค่าบำรุงศูนย์) ────────────────────────────────────────────────
 model Payment {
-    id             Int      @id @default(autoincrement())
-    childId        Int
-    academicYearId Int
-    month          Int
-    year           Int
-    foodFee        Float    @default(0) // ค่าอาหารกลางวัน
-    maintenanceFee Float    @default(0) // ค่าบำรุงศูนย์พัฒนาเด็กเล็ก
-    otherFee       Float    @default(0) // ค่าอื่นๆ
-    otherFeeNote   String?
-    dueDate        DateTime @db.Date
-    status         String   @default("pending") // "pending" | "paid" | "overdue" | "waived"
-    paidAt         DateTime?
-    paidMethod     String?  // "cash" | "transfer"
-    receiptNo      String?
-    note           String?
-    createdAt      DateTime @default(now())
-    updatedAt      DateTime @updatedAt
+  id             Int       @id @default(autoincrement())
+  childId        Int
+  academicYearId Int
+  month          Int
+  year           Int
+  foodFee        Float     @default(0) // ค่าอาหารกลางวัน
+  maintenanceFee Float     @default(0) // ค่าบำรุงศูนย์พัฒนาเด็กเล็ก
+  otherFee       Float     @default(0) // ค่าอื่นๆ
+  otherFeeNote   String?
+  dueDate        DateTime  @db.Date
+  status         String    @default("pending") // "pending" | "paid" | "overdue" | "waived"
+  paidAt         DateTime?
+  paidMethod     String? // "cash" | "transfer"
+  receiptNo      String?
+  note           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-    child        Child        @relation(fields: [childId], references: [id])
-    academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
 
-    @@unique([childId, academicYearId, month, year])
-    @@index([academicYearId, year, month])
-    @@index([academicYearId, status])
+  @@unique([childId, academicYearId, month, year])
+  @@index([academicYearId, year, month])
+  @@index([academicYearId, status])
+}
+
+// ─── การลางานล่วงหน้า ────────────────────────────────────────────────────────
+model LeaveRequest {
+  id             Int      @id @default(autoincrement())
+  childId        Int
+  academicYearId Int
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
+  reasonType     String // "sick", "personal", "other"
+  reasonDetail   String?
+  status         String   @default("pending") // "pending", "approved", "rejected"
+  requestedBy    String   @default("parent")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  @@index([childId, academicYearId])
+  @@index([startDate])
+}
+
+// ─── เอกสารประกอบของเด็ก ──────────────────────────────────────────────────────
+model ChildDocument {
+  id        Int      @id @default(autoincrement())
+  childId   Int
+  type      String // "birth_certificate", "house_registration", "parent_id", "medical_certificate", "other"
+  url       String   @db.Text
+  createdAt DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
 }

@@ -44,4 +44,4 @@ export interface Enrollment {
     academicYear: { id: number; name: string }
 }
 
-export type MainTab = 'roster' | 'add' | 'import' | 'manage-levels'
+export type MainTab = 'roster' | 'add' | 'import' | 'manage-levels' | 'graduated'

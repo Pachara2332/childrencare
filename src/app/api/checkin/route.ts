@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { ensureChildActiveForAcademicYear } from '@/lib/activeEnrollment'
+import { pushMessage } from '@/lib/line'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,6 +82,9 @@ export async function POST(req: NextRequest) {
           data: { checkInAt: now, isAbsent: false, absenceReason: null, method, note },
           include: { child: true },
         })
+        if (record.child.lineUserId) {
+          pushMessage(record.child.lineUserId, `[เช็กชื่อเข้า] 🏫\nน้อง${record.child.nickname} เดินทางมาถึงศูนย์พัฒนาเด็กเล็กแล้ว\nเวลา: ${now.toLocaleTimeString('th-TH')} น.`)
+        }
         return NextResponse.json(record)
       }
       const record = await prisma.checkIn.upsert({
@@ -89,6 +93,9 @@ export async function POST(req: NextRequest) {
         create: { childId: Number(childId), date, checkInAt: now, method, note },
         include: { child: true },
       })
+      if (record.child.lineUserId) {
+        pushMessage(record.child.lineUserId, `[เช็กชื่อเข้า] 🏫\nน้อง${record.child.nickname} เดินทางมาถึงศูนย์พัฒนาเด็กเล็กแล้ว\nเวลา: ${now.toLocaleTimeString('th-TH')} น.`)
+      }
       return NextResponse.json(record)
     } else {
       if (!existing?.checkInAt) {
@@ -107,6 +114,9 @@ export async function POST(req: NextRequest) {
         },
         include: { child: true },
       })
+      if (record.child.lineUserId) {
+        pushMessage(record.child.lineUserId, `[เช็กชื่อกลับ] 🏠\nน้อง${record.child.nickname} เดินทางออกจากศูนย์พัฒนาเด็กเล็กแล้ว\nเวลา: ${now.toLocaleTimeString('th-TH')} น.\nผู้มารับ: ${pickupName || 'ผู้ปกครอง'} ${pickupRelation ? `(${pickupRelation})` : ''}`)
+      }
       return NextResponse.json(record)
     }
   } catch (error) {

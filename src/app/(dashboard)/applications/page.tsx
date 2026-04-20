@@ -13,6 +13,7 @@ import {
   SendToBack,
   UserRoundPlus,
   XCircle,
+  Printer,
 } from 'lucide-react'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 
@@ -614,30 +615,43 @@ export default function ApplicationsPage() {
                 )}
               </div>
 
-              {selectedApplication.status === 'pending' ? (
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    onClick={() => setConfirmAction('approve')}
-                    disabled={acting}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 transition-all hover:brightness-110"
-                    style={{ background: 'var(--leaf)' }}
-                  >
-                    <CheckCircle2 size={16} />
-                    อนุมัติและสร้างทะเบียนนักเรียน
-                  </button>
-                  <button
-                    onClick={() => setConfirmAction('reject')}
-                    disabled={acting}
-                    className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold disabled:opacity-50 transition-all hover:bg-rose-50"
-                    style={{ background: '#FFF0ED', color: 'var(--coral)', border: '1px solid #F6C2B2' }}
-                  >
-                    <XCircle size={16} />
-                    ปฏิเสธใบสมัคร
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className="rounded-2xl px-4 py-3 text-sm"
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    const { exportApplicationPDF } = await import('@/lib/exportApplication')
+                    exportApplicationPDF(selectedApplication)
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-all hover:bg-gray-50"
+                  style={{ background: 'white', color: 'var(--text)', border: '1px solid var(--warm)' }}
+                >
+                  <Printer size={16} />
+                  พิมพ์ใบสมัคร (PDF)
+                </button>
+
+                {selectedApplication.status === 'pending' ? (
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      onClick={() => setConfirmAction('approve')}
+                      disabled={acting}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 transition-all hover:brightness-110"
+                      style={{ background: 'var(--leaf)' }}
+                    >
+                      <CheckCircle2 size={16} />
+                      อนุมัติและสร้างทะเบียนนักเรียน
+                    </button>
+                    <button
+                      onClick={() => setConfirmAction('reject')}
+                      disabled={acting}
+                      className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold disabled:opacity-50 transition-all hover:bg-rose-50"
+                      style={{ background: '#FFF0ED', color: 'var(--coral)', border: '1px solid #F6C2B2' }}
+                    >
+                      <XCircle size={16} />
+                      ปฏิเสธใบสมัคร
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-2xl px-4 py-3 text-sm"
                   style={{
                     background:
                       selectedApplication.status === 'approved'
@@ -652,6 +666,7 @@ export default function ApplicationsPage() {
                   ใบสมัครนี้ถูก{statusLabel(selectedApplication.status)}แล้ว
                 </div>
               )}
+              </div>
             </div>
           )}
         </section>

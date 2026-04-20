@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { ensureChildActiveForAcademicYear } from '@/lib/activeEnrollment'
+import { pushMessage } from '@/lib/line'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
         recordedBy: recordedBy || 'teacher',
       },
     })
+
+    const child = await prisma.child.findUnique({ where: { id: Number(childId) } })
+    if (child?.lineUserId) {
+      pushMessage(child.lineUserId, `[พัฒนาการ] 📈\nคุณครูได้อัปเดทผลการวัดพัฒนาการ/น้ำหนัก/ส่วนสูง ของน้อง${child.nickname} เข้าสู่ระบบแล้ว\nผู้ปกครองสามารถติดตามความก้าวหน้าตลอดเทอมได้ในสมุดพกออนไลน์ครับ 😊`)
+    }
 
     return NextResponse.json(development, { status: 201 })
   } catch (error) {

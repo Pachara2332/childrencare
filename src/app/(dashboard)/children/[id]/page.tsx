@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import QRCode from 'qrcode'
 import { Skeleton } from '@/app/components/ui/Skeleton'
-import { ArrowLeft, User, Baby, UserCircle, Cake, Droplets, HeartPulse, Users, BookOpen, Activity, Target, QrCode, ClipboardList, CheckCircle2, History, XCircle, BarChart3, TrendingUp, Award, Scale, Download } from 'lucide-react'
+import { ArrowLeft, User, Baby, UserCircle, Cake, Droplets, HeartPulse, Users, BookOpen, Activity, Target, QrCode, ClipboardList, CheckCircle2, History, XCircle, BarChart3, TrendingUp, Award, Scale, Download, FolderOpen, Upload, Trash2 } from 'lucide-react'
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog'
 import {
     EnrollmentStatus,
@@ -61,7 +61,7 @@ interface CheckIn {
     method: string
 }
 
-type Tab = 'info' | 'checkin' | 'development' | 'qr'
+type Tab = 'info' | 'checkin' | 'development' | 'qr' | 'documents'
 
 export default function ChildProfilePage() {
     const { id } = useParams<{ id: string }>()
@@ -71,6 +71,8 @@ export default function ChildProfilePage() {
     const [developments, setDevelopments] = useState<Development[]>([])
     const [checkIns, setCheckIns] = useState<CheckIn[]>([])
     const [qrDataUrl, setQrDataUrl] = useState('')
+    const [documents, setDocuments] = useState<any[]>([])
+    const [uploading, setUploading] = useState(false)
     const [tab, setTab] = useState<Tab>('info')
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)

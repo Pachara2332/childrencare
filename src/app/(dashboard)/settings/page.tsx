@@ -74,7 +74,11 @@ export default function SettingsPage() {
 
     const handleSetActive = async (id: number) => {
         setActivatingYearId(id)
-        await fetch(`/api/academic-years/${id}/activate`, { method: 'POST' })
+        const res = await fetch(`/api/academic-years/${id}/activate`, { method: 'POST' })
+        const data = await res.json()
+        if (data.message && data.message !== 'ตั้งปีการศึกษาปัจจุบันสำเร็จ') {
+            alert(data.message)
+        }
         setYears(prev => prev.map(y => ({ ...y, isActive: y.id === id })))
         setActivatingYearId(null)
         setConfirmActiveYearId(null)
@@ -290,7 +294,7 @@ export default function SettingsPage() {
                 onClose={() => setConfirmActiveYearId(null)}
                 onConfirm={() => confirmActiveYearId && handleSetActive(confirmActiveYearId)}
                 title="ตั้งเป็นปีการศึกษาปัจจุบัน?"
-                description="ระบบทั้งหมดจะถูกสลับไปใช้ปีการศึกษานี้ ข้อมูลนักเรียนและการเงินของปีนี้จะถูกแสดงแทน ยืนยันข้อมูลถูกต้องใช่หรือไม่?"
+                description="ระบบทั้งหมดจะถูกสลับไปใช้ปีการศึกษานี้ ระบบอาจจะทำการเลื่อนชั้นเตรียมอนุบาลและจบการศึกษาอนุบาล 1 ให้อัตโนมัติหากเปลี่ยนจากปีอื่น ยืนยันข้อมูลถูกต้องใช่หรือไม่?"
                 confirmLabel="ยืนยันตั้งค่า"
                 variant="info"
                 loading={activatingYearId !== null}

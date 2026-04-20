@@ -21,6 +21,7 @@ import {
   X,
   PiggyBank,
   ClipboardList,
+  CalendarClock,
 } from 'lucide-react'
 import { useChildcareStore } from '@/store/useStore'
 
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/children', icon: Baby, label: 'ข้อมูลเด็ก' },
   { href: '/applications', icon: ClipboardList, label: 'ใบสมัครออนไลน์' },
   { href: '/checkin', icon: CheckSquare, label: 'เช็กชื่อ' },
+  { href: '/leaves', icon: CalendarClock, label: 'จัดการลา' },
   { href: '/announcements', icon: Megaphone, label: 'แจ้งข่าว' },
   { href: '/development', icon: TrendingUp, label: 'พัฒนาการ' },
   { href: '/activities', icon: Camera, label: 'กิจกรรมรายวัน' },
